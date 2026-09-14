@@ -3,7 +3,7 @@ use std::panic;
 use std::sync::{Arc, Mutex, MutexGuard};
 use log::{error, info};
 use strum_macros::Display;
-use crate::protocols::detection::l7_tagger::L7Tag::{HTTP, Unencrypted, SOCKS, SSH, RTSP, STUN, TURN};
+use crate::protocols::detection::l7_tagger::L7Tag::{HTTP, Unencrypted, SOCKS, SSH, RTSP, STUN, TURN, RTP, DTLS};
 use crate::state::tables::tcp_table::TcpSession;
 use crate::protocols::parsers::l4_key::L4Key;
 use crate::helpers::timer::{record_timer, Timer};
@@ -12,7 +12,7 @@ use crate::messagebus::channel_names::WiredChannelName;
 use crate::metrics::Metrics;
 use crate::protocols::detection::taggers::network_protocols::{http_tagger, rtsp_tagger, socks_tagger, ssh_tagger};
 use crate::protocols::detection::taggers::tagger_command::TaggerCommand;
-use crate::protocols::parsers::stun_tagger;
+use crate::protocols::parsers::{dtls_tagger, rtp_tagger, stun_tagger};
 use crate::state::tables::udp_table::UdpConversation;
 use crate::to_pipeline;
 
@@ -34,7 +34,10 @@ pub enum L7Tag {
     DHCP4,
     NTP,
     STUN,
-    TURN
+    TURN,
+    RTP,
+    DTLS,
+    WebRTC
 }
 
 pub fn tag_tcp_sessions(sessions: &mut MutexGuard<HashMap<L4Key, TcpSession>>,
@@ -121,6 +124,12 @@ pub fn tag_udp_sessions(conversations: &mut MutexGuard<HashMap<L4Key, UdpConvers
                 // Apply any commands issued by the taggers.
                 for command in commands {
                     command.apply(conversation);
+                }
+
+                if conversation.tags.contains(&STUN)
+                    && (conversation.tags.contains(&RTP) || conversation.tags.contains(&DTLS)) {
+                    // We can safely assume the flow is WebRTC when STUN combined with RTP or DTLS.
+                    conversation.tags.insert(L7Tag::WebRTC);
                 }
             },
             Err(e) => {
@@ -325,6 +334,59 @@ fn tag_all_udp(client_to_server: &[u8],
             "tables.udp.timer.sessions.tagging.stun.untagged",
             metrics
         );
+    }
+
+    // Conversations with recent buffer enabled.
+    if conversation.capture_recent {
+        let recent_c2s: Vec<Vec<u8>> =
+            conversation.recent_client_to_server.iter().cloned().collect();
+        let recent_s2c: Vec<Vec<u8>> =
+            conversation.recent_server_to_client.iter().cloned().collect();
+
+        // RTP.
+        let mut rtp_timer = Timer::new();
+        if let Some(streams) = rtp_tagger::tag(&recent_c2s, &recent_s2c) {
+            rtp_timer.stop();
+            record_timer(rtp_timer.elapsed_microseconds(),
+                         "tables.udp.timer.sessions.tagging.rtp.tagged", metrics);
+            tags.insert(RTP);
+
+            if let Some(dir) = rtp_tagger::dominant_direction(&streams) {
+                let client_endpoint = match dir {
+                    rtp_tagger::RtpDirection::ClientToServer =>
+                        (conversation.source_address, conversation.source_port),
+                    rtp_tagger::RtpDirection::ServerToClient =>
+                        (conversation.destination_address, conversation.destination_port),
+                };
+                commands.push(TaggerCommand::OrientClientTo {
+                    address: client_endpoint.0,
+                    port: client_endpoint.1,
+                });
+            }
+
+            info!("RTP STREAMS: {:?}", streams);
+
+            // TO RTP PIPELINE
+        } else {
+            rtp_timer.stop();
+            record_timer(rtp_timer.elapsed_microseconds(),
+                         "tables.udp.timer.sessions.tagging.rtp.untagged", metrics);
+        }
+
+        // DTLS (data channel).
+        let mut dtls_timer = Timer::new();
+        if dtls_tagger::tag(&recent_c2s, &recent_s2c).is_some() {
+            dtls_timer.stop();
+            record_timer(dtls_timer.elapsed_microseconds(),
+                         "tables.udp.timer.sessions.tagging.dtls.tagged", metrics);
+            tags.insert(DTLS);
+
+            // TO DTLS PIPELINE
+        } else {
+            dtls_timer.stop();
+            record_timer(dtls_timer.elapsed_microseconds(),
+                         "tables.udp.timer.sessions.tagging.dtls.untagged", metrics);
+        }
     }
 
     (tags, commands)

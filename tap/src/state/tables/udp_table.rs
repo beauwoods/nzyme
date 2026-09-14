@@ -15,6 +15,7 @@ use crate::protocols::parsers::l4_key::L4Key;
 use crate::wired::traffic_direction::TrafficDirection;
 
 const MAX_BYTES_PER_DIRECTION: usize = 256;
+const RECENT_RING_MAX_DATAGRAMS: usize = 64;
 
 pub struct UdpTable {
     leaderlink: Arc<Mutex<Leaderlink>>,
@@ -43,6 +44,9 @@ pub struct UdpConversation {
     pub bytes_count_tx_incremental: u64, // New bytes since last report.
     pub datagrams_client_to_server: VecDeque<Vec<u8>>,
     pub datagrams_server_to_client: VecDeque<Vec<u8>>,
+    pub capture_recent: bool,
+    pub recent_client_to_server: VecDeque<Vec<u8>>,
+    pub recent_server_to_client: VecDeque<Vec<u8>>,
     pub tags: HashSet<L7Tag>
 }
 
@@ -102,6 +106,15 @@ impl UdpTable {
                                     push_bounded(&mut c.datagrams_server_to_client, datagram.payload.clone()),
                             }
 
+                            if c.capture_recent {
+                                match traffic_direction {
+                                    TrafficDirection::ClientToServer =>
+                                        push_recent(&mut c.recent_client_to_server, datagram.payload.clone()),
+                                    TrafficDirection::ServerToClient =>
+                                        push_recent(&mut c.recent_server_to_client, datagram.payload.clone()),
+                                }
+                            }
+
                             c.tags.extend(tags);
 
                             timer.stop();
@@ -159,6 +172,9 @@ impl UdpTable {
                 bytes_count_tx_incremental: bytes_tx,
                 datagrams_client_to_server,
                 datagrams_server_to_client,
+                capture_recent: false,
+                recent_client_to_server: VecDeque::new(),
+                recent_server_to_client: VecDeque::new(),
                 tags,
             }
         );
@@ -276,4 +292,11 @@ fn push_bounded(q: &mut VecDeque<Vec<u8>>, payload: Vec<u8>) {
     }
 
     q.push_back(payload);
+}
+
+fn push_recent(q: &mut VecDeque<Vec<u8>>, payload: Vec<u8>) {
+    q.push_back(payload);
+    while q.len() > RECENT_RING_MAX_DATAGRAMS {
+        q.pop_front();
+    }
 }

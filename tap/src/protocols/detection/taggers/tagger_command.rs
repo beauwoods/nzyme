@@ -1,7 +1,7 @@
 use std::net::IpAddr;
 use crate::state::tables::udp_table::UdpConversation;
 
-// A command a tagger can emit for the owning table to apply.
+// A command a tagger can emit for the parent table to apply.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TaggerCommand {
     /*
@@ -13,6 +13,16 @@ pub enum TaggerCommand {
      * This command should only be issued in very high confidence situations.
      */
     OrientClientTo { address: IpAddr, port: u16 },
+
+    /*
+     * The tagger has determined that the detected protocol may carry additional, later-phase
+     * protocols inside the flow. This command instructs the parent table to start filling
+     * the lazy recent-window buffer for the flow.
+     *
+     * The recent-window buffer allows us to detect protocols after the default buffer of
+     * the initially received bytes has filled up.
+     */
+    CaptureRecent
 }
 
 impl TaggerCommand {
@@ -20,6 +30,9 @@ impl TaggerCommand {
         match *self {
             TaggerCommand::OrientClientTo { address, port } => {
                 orient_client_to(conv, address, port);
+            },
+            TaggerCommand::CaptureRecent => {
+                conv.capture_recent = true;
             }
         }
     }

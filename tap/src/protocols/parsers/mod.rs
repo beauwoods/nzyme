@@ -9,3 +9,5 @@ pub mod l4_key;
 pub mod udp_parser;
 pub mod ntp_parser;
 pub mod stun_tagger;
+pub mod rtp_tagger;
+pub mod dtls_tagger;

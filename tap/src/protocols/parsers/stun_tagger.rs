@@ -105,7 +105,8 @@ struct StunMessage {
 pub enum StunDirection {
     Forward,
     Reversed,
-    Unknown,
+    Ambiguous, // Mutual ICE. Cannot decide.
+    Unknown // No request seen at all
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -179,14 +180,13 @@ pub fn tag_udp(client_to_server: &[u8], server_to_client: &[u8], conversation: &
     let reversed = match stun.direction {
         StunDirection::Forward => false,
         StunDirection::Reversed => true,
+        StunDirection::Ambiguous => false,
         StunDirection::Unknown => {
             let src_local = is_site_local(conversation.source_address);
             let dst_local = is_site_local(conversation.destination_address);
             match (src_local, dst_local) {
-                // Exactly one side is site-local: that is the client.
                 (true, false) => false,
                 (false, true) => true,
-                // Both or none are site-local: can't decide.
                 _ => false,
             }
         }
@@ -203,18 +203,19 @@ pub fn tag_udp(client_to_server: &[u8], server_to_client: &[u8], conversation: &
          conversation.destination_address, conversation.destination_port)
     };
 
-    /*
-     * Emit the orientation command for the table, matching the same decision.
-     * Only emit when we actually have an opinion (not the ambiguous both/neither case).
-     */
     let mut commands = Vec::new();
+
+    // This flow is STUN/ICE and we start recent data capture so a later RTP tagger can work.
+    commands.push(TaggerCommand::CaptureRecent);
+
     let client_endpoint = if reversed {
         Some((conversation.destination_address, conversation.destination_port))
     } else {
-        // Only assert "source is client" when we have a real signal for it.
         match stun.direction {
-            StunDirection::Forward => Some((conversation.source_address, conversation.source_port)),
-            StunDirection::Unknown if is_site_local(conversation.source_address)
+            StunDirection::Forward =>
+                Some((conversation.source_address, conversation.source_port)),
+            StunDirection::Unknown
+            if is_site_local(conversation.source_address)
                 && !is_site_local(conversation.destination_address) =>
                 Some((conversation.source_address, conversation.source_port)),
             _ => None,
@@ -261,12 +262,11 @@ fn tag(client_to_server: &[u8], server_to_client: &[u8]) -> Option<StunTag> {
 
     let request_in_c2s = c2s.iter().any(|m| m.class == StunClass::Request);
     let request_in_s2c = s2c.iter().any(|m| m.class == StunClass::Request);
-    let direction = if request_in_c2s {
-        StunDirection::Forward
-    } else if request_in_s2c {
-        StunDirection::Reversed
-    } else {
-        StunDirection::Unknown
+    let direction = match (request_in_c2s, request_in_s2c) {
+        (true, false) => StunDirection::Forward,
+        (false, true) => StunDirection::Reversed,
+        (true, true)  => StunDirection::Ambiguous,
+        (false, false) => StunDirection::Unknown,
     };
 
     let mut messages = c2s;
