@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use chrono::{Duration, Utc};
-use log::{error, info};
+use log::{error};
 use crate::helpers::timer::{record_timer, Timer};
 use crate::link::leaderlink::Leaderlink;
 use crate::link::reports::webrtc_report;
@@ -56,8 +56,6 @@ impl WebRtcTable {
                 return;
             }
         };
-
-        info!("webrtc: {} -> {:?}", conversations.len(), conversations);
 
         if conversations.is_empty() {
             return;
