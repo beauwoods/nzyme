@@ -12,7 +12,8 @@ pub enum WiredChannelName {
     RtspPipeline,
     StunPipeline,
     Dhcpv4Pipeline,
-    NtpPipeline
+    NtpPipeline,
+    WebRtcPipeline
 }
 
 #[derive(Debug, Clone, EnumIter, Display)]

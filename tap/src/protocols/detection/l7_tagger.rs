@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::panic;
 use std::sync::{Arc, Mutex, MutexGuard};
-use log::{error, info};
+use log::{debug, error, info};
 use strum_macros::Display;
 use crate::protocols::detection::l7_tagger::L7Tag::{HTTP, Unencrypted, SOCKS, SSH, RTSP, STUN, TURN, RTP, DTLS};
 use crate::state::tables::tcp_table::TcpSession;
@@ -13,8 +13,10 @@ use crate::metrics::Metrics;
 use crate::protocols::detection::taggers::network_protocols::{http_tagger, rtsp_tagger, socks_tagger, ssh_tagger};
 use crate::protocols::detection::taggers::tagger_command::TaggerCommand;
 use crate::protocols::parsers::{dtls_tagger, rtp_tagger, stun_tagger};
+use crate::protocols::parsers::rtp_tagger::RtpStream;
 use crate::state::tables::udp_table::UdpConversation;
 use crate::to_pipeline;
+use crate::wired::ethernet::types::webrtc_conversation::WebRtcConversation;
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Display, PartialEq, Clone, Hash, Eq)]
@@ -303,89 +305,99 @@ fn tag_all_udp(client_to_server: &[u8],
     let mut tags = HashSet::new();
     let mut commands = Vec::new();
 
-    // STUN / TURN.
     let mut stun_timer_untagged = Timer::new();
     let mut stun_timer_tagged = Timer::new();
-    if let Some((stun, stun_commands)) = stun_tagger::tag_udp(client_to_server, server_to_client, conversation) {
+    let mut stun_negotiation_key: Option<String> = None; // Needed in WebRTC later.
+    if let Some((stun, stun_commands, stun_neg_key)) =
+        stun_tagger::tag_udp(client_to_server, server_to_client, conversation) {
+
         stun_timer_tagged.stop();
-        record_timer(
-            stun_timer_tagged.elapsed_microseconds(),
-            "tables.udp.timer.sessions.tagging.stun.tagged",
-            metrics
-        );
+        record_timer(stun_timer_tagged.elapsed_microseconds(),
+                     "tables.udp.timer.sessions.tagging.stun.tagged", metrics);
 
         tags.extend([STUN]);
-        if stun.is_turn {
-            tags.extend([TURN]);
-        }
+        if stun.is_turn { tags.extend([TURN]); }
         commands.extend(stun_commands);
 
         let len = stun.estimate_struct_size();
-        to_pipeline!(
-            WiredChannelName::StunPipeline,
-            bus.stun_pipeline.sender,
-            Arc::new(stun),
-            len
-        );
+        to_pipeline!(WiredChannelName::StunPipeline, bus.stun_pipeline.sender, Arc::new(stun), len);
+
+        stun_negotiation_key = stun_neg_key;
     } else {
         stun_timer_untagged.stop();
-        record_timer(
-            stun_timer_untagged.elapsed_microseconds(),
-            "tables.udp.timer.sessions.tagging.stun.untagged",
-            metrics
-        );
+        record_timer(stun_timer_untagged.elapsed_microseconds(),
+                     "tables.udp.timer.sessions.tagging.stun.untagged", metrics);
     }
 
-    // Conversations with recent buffer enabled.
+    // Taggers on conversations with recent buffer enabled.
     if conversation.capture_recent {
         let recent_c2s: Vec<Vec<u8>> =
             conversation.recent_client_to_server.iter().cloned().collect();
         let recent_s2c: Vec<Vec<u8>> =
             conversation.recent_server_to_client.iter().cloned().collect();
 
-        // RTP.
+        // RTP. (Currently only used in WebRTC below, not in its own pipeline)
         let mut rtp_timer = Timer::new();
-        if let Some(streams) = rtp_tagger::tag(&recent_c2s, &recent_s2c) {
-            rtp_timer.stop();
-            record_timer(rtp_timer.elapsed_microseconds(),
-                         "tables.udp.timer.sessions.tagging.rtp.tagged", metrics);
-            tags.insert(RTP);
+        let rtp_streams: Vec<RtpStream> = match rtp_tagger::tag(&recent_c2s, &recent_s2c) {
+            Some(streams) => {
+                rtp_timer.stop();
+                record_timer(rtp_timer.elapsed_microseconds(),
+                             "tables.udp.timer.sessions.tagging.rtp.tagged", metrics);
+                tags.insert(RTP);
 
-            if let Some(dir) = rtp_tagger::dominant_direction(&streams) {
-                let client_endpoint = match dir {
-                    rtp_tagger::RtpDirection::ClientToServer =>
-                        (conversation.source_address, conversation.source_port),
-                    rtp_tagger::RtpDirection::ServerToClient =>
-                        (conversation.destination_address, conversation.destination_port),
-                };
-                commands.push(TaggerCommand::OrientClientTo {
-                    address: client_endpoint.0,
-                    port: client_endpoint.1,
-                });
+                if let Some(dir) = rtp_tagger::dominant_direction(&streams) {
+                    let (address, port) = match dir {
+                        rtp_tagger::RtpDirection::ClientToServer =>
+                            (conversation.source_address, conversation.source_port),
+                        rtp_tagger::RtpDirection::ServerToClient =>
+                            (conversation.destination_address, conversation.destination_port),
+                    };
+                    commands.push(TaggerCommand::OrientClientTo { address, port });
+                }
+
+                streams
             }
+            None => {
+                rtp_timer.stop();
+                record_timer(rtp_timer.elapsed_microseconds(),
+                             "tables.udp.timer.sessions.tagging.rtp.untagged", metrics);
+                Vec::new()
+            }
+        };
 
-            info!("RTP STREAMS: {:?}", streams);
-
-            // TO RTP PIPELINE
-        } else {
-            rtp_timer.stop();
-            record_timer(rtp_timer.elapsed_microseconds(),
-                         "tables.udp.timer.sessions.tagging.rtp.untagged", metrics);
-        }
-
-        // DTLS (data channel).
+        // DTLS. (Currently only used in WebRTC below, not in its own pipeline)
         let mut dtls_timer = Timer::new();
-        if dtls_tagger::tag(&recent_c2s, &recent_s2c).is_some() {
+        let dtls_result = dtls_tagger::tag(&recent_c2s, &recent_s2c);
+        if dtls_result.is_some() {
             dtls_timer.stop();
             record_timer(dtls_timer.elapsed_microseconds(),
                          "tables.udp.timer.sessions.tagging.dtls.tagged", metrics);
             tags.insert(DTLS);
-
-            // TO DTLS PIPELINE
         } else {
             dtls_timer.stop();
             record_timer(dtls_timer.elapsed_microseconds(),
                          "tables.udp.timer.sessions.tagging.dtls.untagged", metrics);
+        }
+
+        // WebRTC.
+        let has_rtp = !rtp_streams.is_empty();
+        let has_dtls = dtls_result.is_some();
+        if tags.contains(&STUN) && (has_rtp || has_dtls) {
+            match &stun_negotiation_key {
+                Some(key) => {
+                    let webrtc = WebRtcConversation::build(
+                        conversation,
+                        key.clone(),
+                        rtp_streams,
+                        dtls_result.map(|d| d.app_data_records).unwrap_or(0),
+                    );
+                    let len = webrtc.estimate_struct_size();
+                    to_pipeline!(WiredChannelName::WebRtcPipeline, bus.webrtc_pipeline.sender, Arc::new(webrtc), len);
+                }
+                None => {
+                    debug!("WebRTC media/data on a STUN flow with no negotiation key; skipping.");
+                }
+            }
         }
     }
 

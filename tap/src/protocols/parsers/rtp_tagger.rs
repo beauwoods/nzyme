@@ -1,3 +1,5 @@
+use strum_macros::Display;
+
 const STUN_MAGIC_COOKIE: [u8; 4] = [0x21, 0x12, 0xA4, 0x42];
 const RTP_STREAM_MIN_PACKETS: usize = 3;
 
@@ -7,7 +9,7 @@ pub enum RtpDirection {
     ServerToClient,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq)]
 pub enum RtpMediaKind {
     Audio,
     Video,

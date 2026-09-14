@@ -166,9 +166,19 @@ pub fn tag_tcp(client_to_server: &[u8], server_to_client: &[u8], session: &TcpSe
 }
 
 pub fn tag_udp(client_to_server: &[u8], server_to_client: &[u8], conversation: &UdpConversation)
-               -> Option<(StunFlow, Vec<TaggerCommand>)> {
+               -> Option<(StunFlow, Vec<TaggerCommand>, Option<String>)> {
 
     let stun = tag(client_to_server, server_to_client)?;
+
+    let negotiation_key = canonical_ice_ufrag(&stun.ice_ufrags)
+        .map(|(canonical, _, _)| canonical)
+        .or_else(|| {
+            if stun.is_turn {
+                stun.turn_usernames.first().cloned()
+            } else {
+                None
+            }
+        });
 
     /*
      * Figure out which endpoint is the client.
@@ -249,7 +259,7 @@ pub fn tag_udp(client_to_server: &[u8], server_to_client: &[u8], conversation: &
         saw_error_response: stun.saw_error_response,
     };
 
-    Some((flow, commands))
+    Some((flow, commands, negotiation_key))
 }
 
 fn tag(client_to_server: &[u8], server_to_client: &[u8]) -> Option<StunTag> {
@@ -500,4 +510,22 @@ fn parse_xor_address(value: &[u8], transaction_id: &[u8]) -> Option<SocketAddr> 
         }
         _ => None,
     }
+}
+
+
+pub fn canonical_ice_ufrag(ufrags: &[String]) -> Option<(String, String, String)> {
+    for username in ufrags {
+        if let Some((first, second)) = username.split_once(':') {
+            if first.is_empty() || second.is_empty() {
+                continue;
+            }
+            let (a, b) = if first <= second {
+                (first.to_string(), second.to_string())
+            } else {
+                (second.to_string(), first.to_string())
+            };
+            return Some((format!("{a}|{b}"), a, b));
+        }
+    }
+    None
 }

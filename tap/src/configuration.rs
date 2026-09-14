@@ -138,6 +138,7 @@ pub struct Protocols {
     pub ntp: ProtocolsNtp,
     pub rtsp: ProtocolsRtsp,
     pub stun: ProtocolsStun,
+    pub webrtc: ProtocolsWebRtc,
     pub uav_remote_id: ProtocolsUavRemoteId,
 }
 
@@ -201,6 +202,11 @@ pub struct ProtocolsRtsp {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ProtocolsStun {
+    pub pipeline_size: i32
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ProtocolsWebRtc {
     pub pipeline_size: i32
 }
 
@@ -391,6 +397,12 @@ pub fn load(path: String) -> Result<Configuration, Error> {
     // RTSP.
     if doc.protocols.rtsp.pipeline_size <= 0 {
         bail!("Configuration variable `protocols.rtsp.pipeline_size` must be set to a value \
+            greater than 0.");
+    }
+
+    // WebRTC.
+    if doc.protocols.webrtc.pipeline_size <= 0 {
+        bail!("Configuration variable `protocols.webrtc.pipeline_size` must be set to a value \
             greater than 0.");
     }
 

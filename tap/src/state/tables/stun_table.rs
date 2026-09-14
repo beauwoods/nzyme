@@ -8,7 +8,7 @@ use crate::link::leaderlink::Leaderlink;
 use crate::link::reports::nat_traversal_report;
 use crate::metrics::Metrics;
 use crate::protocols::parsers::l4_key::L4Key;
-use crate::protocols::parsers::stun_tagger::{StunFlow, StunTransport};
+use crate::protocols::parsers::stun_tagger::{canonical_ice_ufrag, StunFlow, StunTransport};
 
 const STALE_AFTER_MINUTES: i64 = 1;
 
@@ -270,23 +270,6 @@ fn extend_unique<T: PartialEq + Clone>(target: &mut Vec<T>, values: &[T]) {
             target.push(value.clone());
         }
     }
-}
-
-fn canonical_ice_ufrag(ufrags: &[String]) -> Option<(String, String, String)> {
-    for username in ufrags {
-        if let Some((first, second)) = username.split_once(':') {
-            if first.is_empty() || second.is_empty() {
-                continue;
-            }
-            let (a, b) = if first <= second {
-                (first.to_string(), second.to_string())
-            } else {
-                (second.to_string(), first.to_string())
-            };
-            return Some((format!("{a}|{b}"), a, b));
-        }
-    }
-    None
 }
 
 fn has_bidirectional_ufrag(ufrags: &[String]) -> bool {

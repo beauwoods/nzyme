@@ -10,6 +10,7 @@ use crate::wired::packets::{Dhcpv4Packet, NtpPacket, RtspStream, SocksTunnel, Ss
 use crate::messagebus::channel_names::{BluetoothChannelName, Dot11ChannelName, GenericChannelName, WiredChannelName};
 use crate::protocols::detection::taggers::remoteid::messages::UavRemoteIdMessage;
 use crate::protocols::parsers::stun_tagger::StunFlow;
+use crate::wired::ethernet::types::webrtc_conversation::WebRtcConversation;
 use crate::wired::packets::{
     ArpPacket,
     DNSPacket,
@@ -39,6 +40,7 @@ pub struct Bus {
     pub ntp_pipeline: NzymeChannel<NtpPacket>,
     pub rtsp_pipeline: NzymeChannel<RtspStream>,
     pub stun_pipeline: NzymeChannel<StunFlow>,
+    pub webrtc_pipeline: NzymeChannel<WebRtcConversation>,
 
     pub uav_remote_id_pipeline: NzymeChannel<UavRemoteIdMessage>
 }
@@ -117,6 +119,8 @@ impl Bus<> {
             bounded(configuration.protocols.rtsp.pipeline_size as usize);
         let (stun_pipeline_sender, stun_pipeline_receiver) =
             bounded(configuration.protocols.stun.pipeline_size as usize);
+        let (webrtc_pipeline_sender, webrtc_pipeline_receiver) =
+            bounded(configuration.protocols.webrtc.pipeline_size as usize);
 
         let (uav_remote_id_sender, uav_remote_id_receiver) =
             bounded(configuration.protocols.uav_remote_id.pipeline_size as usize);
@@ -234,6 +238,14 @@ impl Bus<> {
                     name: WiredChannelName::StunPipeline.to_string()
                 }),
                 receiver: Arc::new(stun_pipeline_receiver),
+            },
+            webrtc_pipeline: NzymeChannel {
+                sender: Mutex::new(NzymeChannelSender {
+                    metrics: metrics.clone(),
+                    sender: webrtc_pipeline_sender,
+                    name: WiredChannelName::WebRtcPipeline.to_string()
+                }),
+                receiver: Arc::new(webrtc_pipeline_receiver),
             },
             uav_remote_id_pipeline: NzymeChannel {
                 sender: Mutex::new(NzymeChannelSender {

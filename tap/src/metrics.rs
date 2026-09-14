@@ -6,7 +6,7 @@ use strum::IntoEnumIterator;
 use strum_macros::Display;
 use statrs::statistics::{Distribution, OrderStatistics, Data};
 
-use log::{warn, error, info};
+use log::{warn, error};
 use crate::log_monitor::{LogCounts, LogMonitor};
 use crate::messagebus::channel_names::{BluetoothChannelName, Dot11ChannelName, GenericChannelName, WiredChannelName};
 
@@ -75,6 +75,7 @@ pub struct Channels {
     ntp_pipeline: ChannelUtilization,
     rtsp_pipeline: ChannelUtilization,
     stun_pipeline: ChannelUtilization,
+    webrtc_pipeline: ChannelUtilization,
 
     uav_remote_id_pipeline: ChannelUtilization,
 }
@@ -239,6 +240,7 @@ impl Metrics {
             "NtpPipeline" => &mut self.channels.ntp_pipeline,
             "RtspPipeline" => &mut self.channels.rtsp_pipeline,
             "StunPipeline" => &mut self.channels.stun_pipeline,
+            "WebRtcPipeline" => &mut self.channels.webrtc_pipeline,
             "UavRemoteIdPipeline" => &mut self.channels.uav_remote_id_pipeline,
             _ => panic!("Unknown channel {}", channel)
         }
