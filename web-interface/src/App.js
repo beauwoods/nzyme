@@ -187,6 +187,7 @@ import PortalIntegrityPage from "./components/ethernet/portalintegrity/PortalInt
 import PortalIntegrityReportDetailsPage from "./components/ethernet/portalintegrity/PortalIntegrityReportDetailsPage";
 import RTSPStreamDetailsPage from "./components/ethernet/streams/rtsp/RTSPStreamDetailsPage";
 import BluetoothMonitorsPage from "./components/bluetooth/monitoring/BluetoothMonitorsPage";
+import WebRTCSessionsPage from "./components/ethernet/streams/webrtc/WebRTCSessionsPage";
 
 const pingService = new PingService();
 const authenticationService = new AuthenticationService();
@@ -587,6 +588,7 @@ function App() {
                                 <Route path={ApiRoutes.ETHERNET.TUNNELS.SOCKS.TUNNEL_DETAILS(':sessionId')} element={<SOCKSTunnelDetailsPage />}/>
 
                                 { /* Ethernet/Streams. */}
+                                <Route path={ApiRoutes.ETHERNET.STREAMS.WEBRTC.INDEX} element={<WebRTCSessionsPage />}/>
                                 <Route path={ApiRoutes.ETHERNET.STREAMS.RTSP.INDEX} element={<RTSPStreamsPage />}/>
                                 <Route path={ApiRoutes.ETHERNET.STREAMS.RTSP.DETAILS(':sessionId')} element={<RTSPStreamDetailsPage />}/>
 

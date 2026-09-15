@@ -8723,4 +8723,85 @@
         </addColumn>
     </changeSet>
 
+    <changeSet id="create_webrtc_conversations" author="lennartkoopmann">
+        <createTable tableName="webrtc_conversations">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+
+            <column name="tap_uuid" type="uuid">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="l4_session_key" type="text">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="transport" type="text">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="negotiation_key" type="text">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="negotiation_key_sha256" type="text">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="has_rtp" type="boolean">
+                <constraints nullable="false" />
+            </column>
+            <column name="has_dtls" type="boolean">
+                <constraints nullable="false" />
+            </column>
+            <column name="has_audio" type="boolean">
+                <constraints nullable="false" />
+            </column>
+            <column name="has_video" type="boolean">
+                <constraints nullable="false" />
+            </column>
+            <column name="stream_count" type="integer">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="rtp_streams" type="jsonb">
+                <constraints nullable="false" />
+            </column>
+            <column name="dtls_app_data_records" type="bigint">
+                <constraints nullable="false" />
+            </column>
+
+            <column name="first_seen" type="timestamp with time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="last_activity" type="timestamp with time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="updated_at" type="timestamp with time zone">
+                <constraints nullable="false" />
+            </column>
+            <column name="created_at" type="timestamp with time zone">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="webrtc_conversations"
+                             columnNames="tap_uuid, l4_session_key, first_seen"
+                             constraintName="uniq_webrtc_tap_session_seen" />
+
+        <createIndex tableName="webrtc_conversations" indexName="webrtc_negotiation_key">
+            <column name="negotiation_key" />
+        </createIndex>
+
+        <createIndex tableName="webrtc_conversations" indexName="webrtc_tap_last_activity">
+            <column name="tap_uuid" />
+            <column name="last_activity" />
+        </createIndex>
+
+        <createIndex tableName="webrtc_conversations" indexName="webrtc_l4_session_key">
+            <column name="l4_session_key" />
+        </createIndex>
+    </changeSet>
+
 </databaseChangeLog>

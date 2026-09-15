@@ -1,33 +1,33 @@
-import React, {useContext, useEffect, useState} from "react";
-import {RTSP_FILTER_FIELDS} from "./RTSPFilterFields";
-import usePageTitle from "../../../../util/UsePageTitle";
 import {useLocation} from "react-router-dom";
-import {queryParametersToFilters} from "../../../shared/filtering/FilterQueryParameters";
-import {timeRangeFromURLOrDefault} from "../../../shared/timerange/TimeRangeSelector";
-import {Presets} from "../../../shared/timerange/TimeRange";
+import usePageTitle from "../../../../util/UsePageTitle";
+import React, {useContext, useEffect, useState} from "react";
 import {TapContext} from "../../../../App";
+import {timeRangeFromURLOrDefault} from "../../../shared/timerange/TimeRangeUrl";
+import {Presets} from "../../../shared/timerange/TimeRange";
+import {queryParametersToFilters} from "../../../shared/filtering/FilterQueryParameters";
 import {disableTapSelector, enableTapSelector} from "../../../misc/TapSelector";
+import SectionMenuBar from "../../../shared/SectionMenuBar";
+import {STREAMS_MENU_ITEMS} from "../StreamsMenuItems";
+import ApiRoutes from "../../../../util/ApiRoutes";
+import {WEBRTC_FILTER_FIELDS} from "./WebRTCFilterFields";
 import CardTitleWithControls from "../../../shared/CardTitleWithControls";
 import Filters from "../../../shared/filtering/Filters";
-import SectionMenuBar from "../../../shared/SectionMenuBar";
-import ApiRoutes from "../../../../util/ApiRoutes";
-import {STREAMS_MENU_ITEMS} from "../StreamsMenuItems";
-import RTSPStreamsTable from "./RTSPStreamsTable";
+import WebRTCSessionsTable from "./WebRTCSessionsTable";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
 }
 
-export default function RTSPStreamsPage() {
+export default function WebRTCSessionsPage() {
 
-  usePageTitle("RTSP Streams");
+  usePageTitle("WebRTC Sessions");
 
   const tapContext = useContext(TapContext);
   const urlQuery = useQuery();
 
   const [timeRange, setTimeRange] = useState(() => timeRangeFromURLOrDefault(Presets.RELATIVE_HOURS_24))
   const [filters, setFilters] = useState(
-    queryParametersToFilters(urlQuery.get("filters"), RTSP_FILTER_FIELDS)
+    queryParametersToFilters(urlQuery.get("filters"), WEBRTC_FILTER_FIELDS)
   );
 
   const [revision, setRevision] = useState(new Date());
@@ -45,7 +45,7 @@ export default function RTSPStreamsPage() {
       <div className="row">
         <div className="col-md-12">
           <SectionMenuBar items={STREAMS_MENU_ITEMS}
-                          activeRoute={ApiRoutes.ETHERNET.STREAMS.RTSP.INDEX} />
+                          activeRoute={ApiRoutes.ETHERNET.STREAMS.WEBRTC.INDEX}/>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ export default function RTSPStreamsPage() {
 
               <Filters filters={filters}
                        setFilters={setFilters}
-                       fields={RTSP_FILTER_FIELDS} />
+                       fields={WEBRTC_FILTER_FIELDS} />
             </div>
           </div>
         </div>
@@ -70,15 +70,15 @@ export default function RTSPStreamsPage() {
         <div className="col-md-12">
           <div className="card">
             <div className="card-body">
-              <CardTitleWithControls title="All RTSP Streams"
-                                     helpLink="https://go.nzyme.org/ethernet-rtsp"
+              <CardTitleWithControls title="All WebRTC Sessions"
+                                     helpLink="https://go.nzyme.org/ethernet-webrtc"
                                      timeRange={timeRange}
                                      refreshAction={() => setRevision(new Date())} />
 
-              <RTSPStreamsTable timeRange={timeRange}
-                                filters={filters}
-                                setFilters={setFilters}
-                                revision={revision} />
+              <WebRTCSessionsTable timeRange={timeRange}
+                                   filters={filters}
+                                   setFilters={setFilters}
+                                   revision={revision} />
 
             </div>
           </div>
@@ -86,5 +86,4 @@ export default function RTSPStreamsPage() {
       </div>
     </React.Fragment>
   )
-
 }

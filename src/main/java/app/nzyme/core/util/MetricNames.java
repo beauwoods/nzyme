@@ -88,6 +88,8 @@ public class MetricNames {
     public static final String NAT_TOTAL_REPORT_PROCESSING_TIMER = name(NATTable.class, "total-report-processing-timing");
     public static final String NAT_DISCOVERIES_REPORT_PROCESSING_TIMER = name(NATTable.class, "discoveries-report-processing-timing");
     public static final String NAT_NEGOTIATIONS_REPORT_PROCESSING_TIMER = name(NATTable.class, "negotiations-report-processing-timing");
+    public static final String WEBRTC_TOTAL_REPORT_PROCESSING_TIMER = name(WebRTCTable.class, "total-report-processing-timing");
+    public static final String WEBRTC_CONVERSATIONS_REPORT_PROCESSING_TIMER = name(WebRTCTable.class, "conversations-report-processing-timing");
 
     public static final String PORTAL_INTEGRITY_URL_REPORT_PROCESSING_TIMER = name(PortalIntegrityTable.class, "url-report-processing-timing");
 

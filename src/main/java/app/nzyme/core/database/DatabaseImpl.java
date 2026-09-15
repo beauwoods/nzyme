@@ -44,6 +44,7 @@ import app.nzyme.core.ethernet.ssh.db.SSHSessionEntryMapper;
 import app.nzyme.core.ethernet.l4.tcp.db.TcpSessionEntryMapper;
 import app.nzyme.core.ethernet.l4.udp.db.UdpConversationEntryMapper;
 import app.nzyme.core.ethernet.time.ntp.db.NTPTransactionEntryMapper;
+import app.nzyme.core.ethernet.webrtc.db.WebRTCSessionEntryMapper;
 import app.nzyme.core.events.db.EventActionEntryMapper;
 import app.nzyme.core.events.db.EventEntryMapper;
 import app.nzyme.core.events.db.SubscriptionEntryMapper;
@@ -227,7 +228,8 @@ public class DatabaseImpl implements Database {
                 .registerRowMapper(new NATTraversalDiscoveryHistogramBucketMapper())
                 .registerRowMapper(new STUNNegotiationEntryMapper())
                 .registerRowMapper(new PortalIntegrityReportEntryMapper())
-                .registerRowMapper(new PortalIntegrityReportHopEntryMapper());
+                .registerRowMapper(new PortalIntegrityReportHopEntryMapper())
+                .registerRowMapper(new WebRTCSessionEntryMapper());
 
         if (configuration.slowQueryLogThreshold().isPresent()) {
             LOG.info("Slow query log enabled with threshold <{}ms>.", configuration.slowQueryLogThreshold().get());

@@ -103,21 +103,28 @@ fn merge_into(existing: &mut WebRtcConversation, incoming: &WebRtcConversation) 
     existing.has_dtls  |= incoming.has_dtls;
     existing.has_audio |= incoming.has_audio;
     existing.has_video |= incoming.has_video;
-    existing.stream_count = existing.stream_count.max(incoming.stream_count);
 
-    existing.rtp_streams = incoming.rtp_streams.clone();
+    for incoming_stream in &incoming.rtp_streams {
+        match existing.rtp_streams.iter_mut().find(|s| s.ssrc == incoming_stream.ssrc) {
+            Some(existing_stream) => {
+                *existing_stream = incoming_stream.clone();
+            }
+            None => {
+                existing.rtp_streams.push(incoming_stream.clone());
+            }
+        }
+    }
+
+    existing.stream_count = existing.rtp_streams.len() as u16;
     existing.dtls_app_data_records = incoming.dtls_app_data_records;
-
-    // Latest orientation/endpoints.
     existing.source_address = incoming.source_address;
     existing.source_mac = incoming.source_mac.clone();
     existing.source_port = incoming.source_port;
     existing.destination_address = incoming.destination_address;
     existing.destination_port = incoming.destination_port;
-
-    // Volume/timing.
     existing.bytes_rx = incoming.bytes_rx;
     existing.bytes_tx = incoming.bytes_tx;
+    
     if incoming.first_seen < existing.first_seen {
         existing.first_seen = incoming.first_seen;
     }

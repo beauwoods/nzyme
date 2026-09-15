@@ -17,6 +17,7 @@ import app.nzyme.core.rest.resources.taps.reports.tables.ssh.SshSessionsReport;
 import app.nzyme.core.rest.resources.taps.reports.tables.tcp.TcpSessionsReport;
 import app.nzyme.core.rest.resources.taps.reports.tables.uav.UavsReport;
 import app.nzyme.core.rest.resources.taps.reports.tables.udp.UdpConversationsReport;
+import app.nzyme.core.rest.resources.taps.reports.tables.webrtc.WebRTCConversationsReport;
 import app.nzyme.plugin.Subsystem;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.POST;
@@ -270,4 +271,21 @@ public class TablesResource {
 
         return Response.status(Response.Status.CREATED).build();
     }
+
+    @POST
+    @Path("/webrtc/conversations")
+    public Response webRTCConversations(@Context SecurityContext sc, WebRTCConversationsReport report) {
+        AuthenticatedTap tap = ((AuthenticatedTap) sc.getUserPrincipal());
+
+        if (!nzyme.getSubsystems().isEnabled(Subsystem.ETHERNET, tap.getOrganizationId(), tap.getTenantId())) {
+            LOG.debug("Rejecting WebRTC conversations report from tap [{}]: Subsystem is disabled.", tap.getUuid());
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
+
+        LOG.debug("Received WebRTC conversations report from tap [{}]: {}", tap.getUuid(), report);
+        nzyme.getTablesService().webRtc().handleReport(tap.getUuid(), DateTime.now(), report);
+
+        return Response.status(Response.Status.CREATED).build();
+    }
+
 }

@@ -72,7 +72,7 @@ function Sidebar(props) {
               title="NAT"
               icon={<i className="sidebar-icon fa-solid fa-table-cells-large "/>}/>
             <NavigationLink
-              href={ApiRoutes.ETHERNET.STREAMS.RTSP.INDEX}
+              href={ApiRoutes.ETHERNET.STREAMS.WEBRTC.INDEX}
               title="Streams"
               icon={<i className="sidebar-icon fa-solid fa-water"/>}/>
             <NavigationLink

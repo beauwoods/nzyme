@@ -59,6 +59,7 @@ public class TablesService {
                 .put("ntp", new NTPTable(this))
                 .put("rtsp", new RTSPTable(this))
                 .put("nat", new NATTable(this))
+                .put("webrtc", new WebRTCTable(this))
                 .put("portalintegrity", new PortalIntegrityTable(this))
                 .build();
 
@@ -130,6 +131,10 @@ public class TablesService {
 
     public NATTable nat() {
         return (NATTable) tables.get("nat");
+    }
+
+    public WebRTCTable webRtc() {
+        return (WebRTCTable) tables.get("webrtc");
     }
 
     public UAVTable uav() { return (UAVTable) tables.get("uav"); }

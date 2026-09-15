@@ -12,6 +12,7 @@ import app.nzyme.core.ethernet.socks.SOCKS;
 import app.nzyme.core.ethernet.ssh.SSH;
 import app.nzyme.core.ethernet.l4.tcp.TCP;
 import app.nzyme.core.ethernet.time.ntp.NTP;
+import app.nzyme.core.ethernet.webrtc.WebRTC;
 
 public class Ethernet {
 
@@ -27,6 +28,7 @@ public class Ethernet {
     private final NTP ntp;
     private final RTSP rtsp;
     private final NAT nat;
+    private final WebRTC webRtc;
     private final PortalIntegrity portalIntegrity;
 
     public Ethernet(NzymeNode nzyme) {
@@ -42,6 +44,7 @@ public class Ethernet {
         this.ntp = new NTP(this);
         this.rtsp = new RTSP(this);
         this.nat = new NAT(this);
+        this.webRtc = new WebRTC(this);
         this.portalIntegrity = new PortalIntegrity(this);
     }
 
@@ -87,6 +90,10 @@ public class Ethernet {
 
     public NAT nat() {
         return nat;
+    }
+
+    public WebRTC webRtc() {
+        return webRtc;
     }
 
     public PortalIntegrity portalIntegrity() {

@@ -182,6 +182,7 @@ public class NzymeHttpServer {
         resourceConfig.register(RTSPResource.class);
         resourceConfig.register(NATResource.class);
         resourceConfig.register(PortalIntegrityResource.class);
+        resourceConfig.register(WebRTCResource.class);
 
         // Plugin-supplied REST resources.
         for (Object resource : pluginRestResources) {
