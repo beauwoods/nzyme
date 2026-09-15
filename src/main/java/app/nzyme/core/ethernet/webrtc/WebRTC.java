@@ -23,6 +23,7 @@ public class WebRTC {
         SOURCE_ADDRESS("source_address"),
         DESTINATION_MAC("destination_mac"),
         DESTINATION_ADDRESS("destination_address"),
+        STREAM_COUNT("stream_count"),
         HAS_RTP("has_rtp"),
         HAS_DTLS("has_dtls"),
         HAS_AUDIO("has_audio"),

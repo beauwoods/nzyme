@@ -9,12 +9,10 @@ import FilterValueIcon from "../../../shared/filtering/FilterValueIcon";
 import WebRTCService from "../../../../services/ethernet/WebRTCService";
 import {WEBRTC_FILTER_FIELDS} from "./WebRTCFilterFields";
 import WebRTCSessionActiveIndicator from "./WebRTCSessionActiveIndicator";
-import ApiRoutes from "../../../../util/ApiRoutes";
 import FullCopyShortenedId from "../../../shared/FullCopyShortenedId";
 import InternalAddressOnlyWrapper from "../../shared/InternalAddressOnlyWrapper";
 import EthernetMacAddress from "../../../shared/context/macs/EthernetMacAddress";
 import L4Address from "../../shared/L4Address";
-import {STUN_CONNECTIONS_FILTER_FIELDS} from "../../nat/traversal/stun_connections/STUNConnectionsFilterFields";
 import moment from "moment";
 import FullCopy from "../../../shared/FullCopy";
 import {formatDurationMs} from "../../../../util/Tools";
@@ -94,13 +92,13 @@ export default function WebRTCSessionsTable(props) {
           <th>Source Address {columnSorting("source_address")}</th>
           <th>Destination MAC {columnSorting("destination_mac")}</th>
           <th>Destination Address {columnSorting("destination_address")}</th>
-          <th>Streams</th>
-          <th className="hide-narrow">RTP</th>
-          <th className="hide-narrow">DTLS</th>
-          <th className="hide-narrow">Audio</th>
-          <th className="hide-narrow">Video</th>
+          <th>Streams {columnSorting("stream_count")}</th>
+          <th className="hide-narrow">RTP {columnSorting("has_rtp")}</th>
+          <th className="hide-narrow">DTLS {columnSorting("has_dtls")}</th>
+          <th className="hide-narrow">Audio {columnSorting("has_audio")}</th>
+          <th className="hide-narrow">Video {columnSorting("has_video")}</th>
           <th>Bytes {columnSorting("bytes")}</th>
-          <th>Duration</th>
+          <th>Duration {columnSorting("duration")}</th>
           <th>Initiated At {columnSorting("initiated_at")}</th>
           <th>Last Activity {columnSorting("last_activity")}</th>
         </tr>
@@ -147,14 +145,33 @@ export default function WebRTCSessionsTable(props) {
                                                                            field="destination_address"
                                                                            value={s.destination.address} /> : null } />
               </td>
-              <td>{numeral(s.stream_count).format("0,00")}</td>
+              <td>
+                {numeral(s.stream_count).format("0,00")}
+
+                <FilterValueIcon setFilters={setFilters}
+                                 fields={WEBRTC_FILTER_FIELDS}
+                                 field="stream_count"
+                                 value={s.stream_count} />
+              </td>
               <td className="hide-narrow">{s.has_rtp ? yes() : no()}</td>
               <td className="hide-narrow">{s.has_dtls ? yes() : no()}</td>
               <td className="hide-narrow">{s.has_audio ? yes() : no()}</td>
               <td className="hide-narrow">{s.has_video ? yes() : no()}</td>
-              <td>{numeral(s.bytes_exchanged).format("0b")}</td>
+              <td>
+                {numeral(s.bytes_exchanged).format("0b")}
+
+                <FilterValueIcon setFilters={setFilters}
+                                 fields={WEBRTC_FILTER_FIELDS}
+                                 field="bytes_exchanged"
+                                 value={s.bytes_exchanged} />
+              </td>
               <td>
                 <FullCopy shortValue={formatDurationMs(s.duration_ms)} fullValue={s.duration_ms} />
+
+                <FilterValueIcon setFilters={setFilters}
+                                 fields={WEBRTC_FILTER_FIELDS}
+                                 field="duration_ms"
+                                 value={s.duration_ms} />
               </td>
               <td title={moment(s.first_seen).fromNow()}>
                 {moment(s.first_seen).format()}

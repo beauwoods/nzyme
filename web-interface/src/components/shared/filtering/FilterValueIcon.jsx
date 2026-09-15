@@ -53,7 +53,7 @@ export default function FilterValueIcon(props) {
 
   return (
       <React.Fragment>
-        <i className="fa-brands fa-searchengin filter-value" title="Filter Value" onClick={toggleModal}></i>
+        <i className="fa-brands fa-searchengin filter-value hide-narrow" title="Filter Value" onClick={toggleModal}></i>
 
         {modal()}
       </React.Fragment>
