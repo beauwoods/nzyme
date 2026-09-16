@@ -3,7 +3,7 @@ use std::panic::catch_unwind;
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
-use anyhow::{Context, Error};
+use anyhow::{bail, Context, Error};
 use chrono::Utc;
 use dbus::arg;
 use dbus::arg::{RefArg, Variant};
@@ -25,33 +25,72 @@ pub struct Capture {
 
 const DBUS_INTERFACE: &str = "org.bluez.Adapter1";
 
+// Cap on backoff between consecutive failed cycles (adapter not found, or a
+// D-Bus/HCI call failed). Growing this rather than retrying at a flat 1s
+// avoids hammering an adapter that is mid-reset or genuinely gone with fresh
+// D-Bus/HCI traffic every second, which real-world testing on cheap USB
+// Bluetooth dongles found made a marginal adapter's recovery worse, not
+// better.
+const MAX_BACKOFF_SECONDS: u64 = 60;
+
 impl Capture {
 
-    pub fn run(&mut self, device_name: &str) {
-        info!("Starting Bluetooth capture on [{}]", device_name);
+    /// `bd_address` is the adapter's own Bluetooth device address (stable
+    /// hardware identity, extracted from the "bt-<address>" interface name
+    /// by bluetooth_tools::extract_bd_address_from_interface_name). This is
+    /// re-resolved to a current hci device name at the top of every loop
+    /// iteration via `resolve_hci_by_address`, rather than trusting a single
+    /// hci name captured once at thread start: BlueZ/the kernel do not
+    /// guarantee a USB Bluetooth adapter keeps the same hciN across a reset,
+    /// and a fixed name silently starts referring to a different (or no)
+    /// physical adapter once that happens. This mirrors how Sona WiFi
+    /// interfaces are already resolved by their own stable serial number on
+    /// every reconnect (see wireless::dot11::sona::capture::Capture::run).
+    pub fn run(&mut self, interface_name: &str, bd_address: &str) {
+        info!("Starting Bluetooth capture for adapter [{}] (interface [{}]).", bd_address, interface_name);
+
+        let mut consecutive_failures: u32 = 0;
+        let mut last_known_hci: Option<String> = None;
 
         loop {
+            let device_name = match Self::resolve_hci_by_address(bd_address) {
+                Ok(name) => {
+                    if last_known_hci.as_deref() != Some(name.as_str()) {
+                        info!("Bluetooth adapter [{}] is currently [{}].", bd_address, name);
+                        last_known_hci = Some(name.clone());
+                    }
+                    name
+                },
+                Err(e) => {
+                    error!("Could not find Bluetooth adapter with address [{}]: {}", bd_address, e);
+                    consecutive_failures += 1;
+                    sleep(Self::backoff(consecutive_failures));
+                    continue;
+                }
+            };
+
             let result = catch_unwind(|| {
                 if self.configuration.bt_classic_enabled {
-                    match self.discover_devices(device_name, "bredr") {
-                        Ok(devices) => self.discovered_devices_to_pipeline(device_name, devices),
+                    match self.discover_devices(&device_name, "bredr") {
+                        Ok(devices) => self.discovered_devices_to_pipeline(&device_name, devices),
                         Err(e) => {
-                            error!("Could not discover Bluetooth Classic devices: {}", e);
+                            error!("Could not discover Bluetooth Classic devices on [{}]: {}", device_name, e);
                         }
                     }
                 }
 
                 if self.configuration.bt_le_enabled {
-                    match self.discover_devices(device_name, "le") {
-                        Ok(devices) => self.discovered_devices_to_pipeline(device_name, devices),
+                    match self.discover_devices(&device_name, "le") {
+                        Ok(devices) => self.discovered_devices_to_pipeline(&device_name, devices),
                         Err(e) => {
-                            error!("Could not discover Bluetooth LE devices: {}", e);
+                            error!("Could not discover Bluetooth LE devices on [{}]: {}", device_name, e);
                         }
                     }
                 }
             });
 
             if let Err(e) = result {
+                consecutive_failures += 1;
                 match e.downcast_ref::<&str>() { Some(s) => {
                     error!("Could not discover Bluetooth devices: {}", s);
                 } _ => { match e.downcast_ref::<String>() { Some(s) => {
@@ -59,14 +98,55 @@ impl Capture {
                 } _ => {
                     error!("Could not discover Bluetooth devices. Panicked with an unknown type.");
                 }}}}
+            } else {
+                consecutive_failures = 0;
             }
 
             /*
              * The discovery methods sleep during discovery, but we add another sleep to make sure
-             * we don't empty spin in case of errors early in the discovery methods.
+             * we don't empty spin in case of errors early in the discovery methods. Backs off on
+             * repeated consecutive failures instead of a flat 1s -- see MAX_BACKOFF_SECONDS.
              */
-            sleep(Duration::from_secs(1))
+            sleep(Self::backoff(consecutive_failures))
         }
+    }
+
+    fn backoff(consecutive_failures: u32) -> Duration {
+        if consecutive_failures == 0 {
+            Duration::from_secs(1)
+        } else {
+            // Shift amount capped at 6 (1 << 6 = 64s) so this can never overflow.
+            let secs = 1u64 << consecutive_failures.min(6);
+            Duration::from_secs(secs.min(MAX_BACKOFF_SECONDS))
+        }
+    }
+
+    /// Looks up the current hci device name (e.g. "hci2") for the adapter
+    /// with the given BD address, by asking BlueZ's own ObjectManager for
+    /// every object it currently knows about and matching on each adapter's
+    /// `Address` property. Does not cache anything -- always reflects
+    /// BlueZ's live state at the moment of the call.
+    fn resolve_hci_by_address(bd_address: &str) -> Result<String, Error> {
+        let conn = Connection::new_system().context("Could not establish connection to D-Bus")?;
+        let obj_manager = conn.with_proxy("org.bluez", "/", Duration::from_secs(5));
+
+        #[allow(clippy::complexity)]
+        let (objects, ): (HashMap<dbus::Path<'static>, HashMap<String, HashMap<String, Variant<Box<dyn RefArg>>>>>, ) =
+            obj_manager.method_call("org.freedesktop.DBus.ObjectManager", "GetManagedObjects", ())
+                .context("Could not fetch managed objects from D-Bus")?;
+
+        for (path, interfaces) in objects {
+            let Some(props) = interfaces.get(DBUS_INTERFACE) else { continue };
+            let Some(address) = props.get("Address").and_then(|v| v.as_str()) else { continue };
+
+            if address.eq_ignore_ascii_case(bd_address) {
+                if let Some(hci_name) = path.to_string().strip_prefix("/org/bluez/").map(String::from) {
+                    return Ok(hci_name);
+                }
+            }
+        }
+
+        bail!("No adapter with this address is currently known to BlueZ")
     }
 
     pub fn discover_devices(&self, device_name: &str, transport: &str)

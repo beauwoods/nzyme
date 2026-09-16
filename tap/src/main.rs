@@ -53,6 +53,7 @@ use crate::wireless::dot11::sona;
 use crate::wireless::dot11::sona::command_router::SonaCommandRouter;
 use crate::wireless::dot11::sona::commands::{SonaCommand};
 use crate::wireless::dot11::sona::sona_tools::extract_serial_from_interface_name;
+use crate::wireless::bluetooth::bluetooth_tools::extract_bd_address_from_interface_name;
 
 #[derive(Parser,Debug)]
 struct Arguments {
@@ -471,6 +472,17 @@ fn main() {
                 continue;
             }
 
+            // Fail fast with a clear message on a malformed interface name, same as
+            // how Sona WiFi interfaces validate their "sona-<serial>" key before
+            // spawning (see above).
+            let bd_address = match extract_bd_address_from_interface_name(interface_name) {
+                Ok(addr) => addr,
+                Err(e) => {
+                    error!("Could not extract Bluetooth address from interface name [{}]: {}", interface_name, e);
+                    continue;
+                }
+            };
+
             let capture_metrics = metrics.clone();
             let capture_bus = bluetooth_bus.clone();
             let interface_config = interface_config.clone();
@@ -488,7 +500,7 @@ fn main() {
                 }
 
                 loop {
-                    bt_capture.run(&interface_name);
+                    bt_capture.run(&interface_name, &bd_address);
 
                     error!("Bluetooth capture [{}] disconnected. Retrying in 5 seconds.", &interface_name);
                     match capture_metrics.lock() {
