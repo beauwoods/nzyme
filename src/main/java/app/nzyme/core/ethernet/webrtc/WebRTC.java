@@ -25,7 +25,6 @@ public class WebRTC {
         SOURCE_ADDRESS("source_address"),
         DESTINATION_MAC("destination_mac"),
         DESTINATION_ADDRESS("destination_address"),
-        STREAM_COUNT("stream_count"),
         HAS_RTP("has_rtp"),
         HAS_DTLS("has_dtls"),
         HAS_AUDIO("has_audio"),
@@ -162,7 +161,7 @@ public class WebRTC {
                         .list()
         );
     }
-
+    
     public List<GenericIntegerHistogramEntry> getActiveSessionsHistogram(TimeRange timeRange,
                                                                          Bucketing.BucketingConfiguration bucketing,
                                                                          Filters filters,
@@ -272,7 +271,8 @@ public class WebRTC {
     private String sessionEndpointsCteBody() {
         return "endpoints AS (" +
                 "SELECT DISTINCT ON (negotiation_key) * FROM conversation_endpoints " +
-                "ORDER BY negotiation_key, source_address_is_site_local DESC, start_time DESC" +
+                "ORDER BY negotiation_key, source_address_is_site_local DESC, start_time DESC, " +
+                "source_address, session_key" +
                 ")";
     }
 
