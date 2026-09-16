@@ -4,6 +4,8 @@ import app.nzyme.core.NzymeNode;
 import app.nzyme.core.database.OrderDirection;
 import app.nzyme.core.ethernet.Ethernet;
 import app.nzyme.core.ethernet.webrtc.db.WebRTCSessionEntry;
+import app.nzyme.core.shared.db.GenericIntegerHistogramEntry;
+import app.nzyme.core.util.Bucketing;
 import app.nzyme.core.util.TimeRange;
 import app.nzyme.core.util.filters.FilterSql;
 import app.nzyme.core.util.filters.FilterSqlFragment;
@@ -157,6 +159,53 @@ public class WebRTC {
                         .bindList("taps", taps)
                         .bind("negotiation_key_sha256", negotiationKeySha256)
                         .mapTo(WebRTCSessionEntry.class)
+                        .list()
+        );
+    }
+
+    public List<GenericIntegerHistogramEntry> getActiveSessionsHistogram(TimeRange timeRange,
+                                                                         Bucketing.BucketingConfiguration bucketing,
+                                                                         Filters filters,
+                                                                         List<UUID> taps) {
+        if (taps.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        FilterSqlFragment filterFragment = FilterSql.generate(filters, new WebRTCFilters());
+
+        return nzyme.getDatabase().withHandle(handle ->
+                handle.createQuery(endpointsCteByTime() + ", " +
+                                "buckets AS (" +
+                                "SELECT generate_series(" +
+                                "date_trunc(:date_trunc, :tr_from::timestamptz), " +
+                                "date_trunc(:date_trunc, :tr_to::timestamptz), " +
+                                "make_interval(secs => :bucket_size_s)" +
+                                ") AS bucket" +
+                                "), " +
+                                "sessions AS (" +
+                                "SELECT w.negotiation_key, " +
+                                "MIN(w.first_seen) AS session_start, " +
+                                "MAX(w.last_activity) AS session_end " +
+                                "FROM webrtc_conversations AS w " +
+                                "LEFT JOIN endpoints AS s ON s.negotiation_key = w.negotiation_key " +
+                                "LEFT JOIN session_bytes AS sb ON sb.negotiation_key = w.negotiation_key " +
+                                "WHERE w.last_activity >= :tr_from AND w.first_seen <= :tr_to " +
+                                "AND w.tap_uuid IN (<taps>)" + filterFragment.whereSql() +
+                                " GROUP BY w.negotiation_key HAVING 1=1 " + filterFragment.havingSql() +
+                                ") " +
+                                "SELECT b.bucket AS bucket, COUNT(sess.negotiation_key) AS value " +
+                                "FROM buckets AS b " +
+                                "LEFT JOIN sessions AS sess " +
+                                "ON sess.session_start <= b.bucket + make_interval(secs => :bucket_size_s) " +
+                                "AND sess.session_end >= b.bucket " +
+                                "GROUP BY b.bucket ORDER BY b.bucket DESC")
+                        .bind("tr_from", timeRange.from())
+                        .bind("tr_to", timeRange.to())
+                        .bind("date_trunc", bucketing.type().getDateTruncName())
+                        .bind("bucket_size_s", bucketing.bucketSizeMs() / 1000.0)
+                        .bindList("taps", taps)
+                        .bindMap(filterFragment.bindings())
+                        .mapTo(GenericIntegerHistogramEntry.class)
                         .list()
         );
     }

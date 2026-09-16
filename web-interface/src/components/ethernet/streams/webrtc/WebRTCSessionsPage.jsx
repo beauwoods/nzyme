@@ -13,6 +13,7 @@ import {WEBRTC_FILTER_FIELDS} from "./WebRTCFilterFields";
 import CardTitleWithControls from "../../../shared/CardTitleWithControls";
 import Filters from "../../../shared/filtering/Filters";
 import WebRTCSessionsTable from "./WebRTCSessionsTable";
+import WebRTCActiveSessionsHistogram from "./WebRTCActiveSessionsHistogram";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -70,7 +71,24 @@ export default function WebRTCSessionsPage() {
         <div className="col-md-12">
           <div className="card">
             <div className="card-body">
-              <CardTitleWithControls title="All WebRTC Sessions"
+              <CardTitleWithControls title="Active Sessions"
+                                     timeRange={timeRange}
+                                     refreshAction={() => setRevision(new Date())} />
+
+              <WebRTCActiveSessionsHistogram timeRange={timeRange}
+                                             setTimeRange={setTimeRange}
+                                             filters={filters}
+                                             revision={revision} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mt-3">
+        <div className="col-md-12">
+          <div className="card">
+            <div className="card-body">
+              <CardTitleWithControls title="All Sessions"
                                      helpLink="https://go.nzyme.org/ethernet-webrtc"
                                      timeRange={timeRange}
                                      refreshAction={() => setRevision(new Date())} />

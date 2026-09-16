@@ -10,4 +10,15 @@ export default class WebRTCService {
     )
   }
 
+  getActiveSessionCountHistogram(setHistogram, timeRange, filters, taps) {
+    const tapsList = Array.isArray(taps) ? taps.join(",") : (taps === "*" ? "*" : null)
+
+    RESTClient.get("/ethernet/webrtc/sessions/active/histogram", {
+        filters: filters,
+        time_range: timeRange,
+        taps: tapsList,
+      }, (response) => setHistogram(response.data)
+    )
+  }
+
 }

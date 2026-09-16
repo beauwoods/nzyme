@@ -12,11 +12,15 @@ import app.nzyme.core.rest.responses.ethernet.L4AddressResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCRTPStreamDetailsResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCSessionDetailsResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCSessionsListResponse;
+import app.nzyme.core.rest.responses.shared.NumericHistogramResponse;
+import app.nzyme.core.shared.db.GenericIntegerHistogramEntry;
+import app.nzyme.core.util.Bucketing;
 import app.nzyme.core.util.TimeRange;
 import app.nzyme.core.util.filters.Filters;
 import app.nzyme.plugin.rest.security.PermissionLevel;
 import app.nzyme.plugin.rest.security.RESTSecured;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -28,10 +32,12 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import org.joda.time.DateTime;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static app.nzyme.core.util.filters.FilterParser.parseFiltersQueryParameter;
@@ -150,6 +156,26 @@ public class WebRTCResource extends TapDataHandlingResource {
         }
 
         return Response.ok(WebRTCSessionsListResponse.create(total, sessions)).build();
+    }
+
+    @GET
+    @Path("/sessions/active/histogram")
+    public Response activeSessionsHistogram(@Context SecurityContext sc,
+                                            @QueryParam("time_range") @Valid String timeRangeParameter,
+                                            @QueryParam("filters") String filtersParameter,
+                                            @QueryParam("taps") String taps) {
+        List<UUID> tapUUIDs = parseAndValidateTapIds(getAuthenticatedUser(sc), nzyme, taps);
+        TimeRange timeRange = parseTimeRangeQueryParameter(timeRangeParameter);
+        Bucketing.BucketingConfiguration bucketing = Bucketing.getConfig(timeRange);
+        Filters filters = parseFiltersQueryParameter(filtersParameter);
+
+        Map<DateTime, Integer> buckets = Maps.newHashMap();
+        for (GenericIntegerHistogramEntry bucket : nzyme.getEthernet().webRtc()
+                .getActiveSessionsHistogram(timeRange, bucketing, filters, tapUUIDs)) {
+            buckets.put(bucket.bucket(), bucket.value());
+        }
+
+        return Response.ok(NumericHistogramResponse.create(buckets, bucketing.bucketSizeMs())).build();
     }
 
 }
