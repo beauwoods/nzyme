@@ -1,4 +1,4 @@
-package app.nzyme.core.database;
+package app.nzyme.core.database.generic;
 
 import com.google.auto.value.AutoValue;
 

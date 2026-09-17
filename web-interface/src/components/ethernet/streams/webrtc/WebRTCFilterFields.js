@@ -2,10 +2,10 @@ import {FILTER_TYPE} from "../../../shared/filtering/Filters";
 
 export const WEBRTC_FILTER_FIELDS = {
   id: { title: "ID", type: FILTER_TYPE.STRING },
-  source_address: { title: "Source IP Address", type: FILTER_TYPE.IP_ADDRESS },
-  source_mac: { title: "Source MAC Address", type: FILTER_TYPE.STRING },
-  destination_address: { title: "Destination IP Address", type: FILTER_TYPE.IP_ADDRESS },
-  destination_mac: { title: "Destination MAC Address", type: FILTER_TYPE.STRING },
+  source_address: { title: "Peer A Address", type: FILTER_TYPE.IP_ADDRESS },
+  source_mac: { title: "Peer A MAC Address", type: FILTER_TYPE.STRING },
+  destination_address: { title: "Peer B IP Address", type: FILTER_TYPE.IP_ADDRESS },
+  destination_mac: { title: "Peer B MAC Address", type: FILTER_TYPE.STRING },
   has_rtp: { title: "Has RTP", type: FILTER_TYPE.BOOLEAN },
   has_dtls: { title: "Has DTLS", type: FILTER_TYPE.BOOLEAN },
   has_audio: { title: "Has Audio", type: FILTER_TYPE.BOOLEAN },

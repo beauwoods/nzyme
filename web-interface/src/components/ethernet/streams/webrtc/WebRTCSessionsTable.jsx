@@ -88,10 +88,10 @@ export default function WebRTCSessionsTable(props) {
         <tr>
           <th>&nbsp; {columnSorting("is_active")}</th>
           <th>ID</th>
-          <th>Source MAC {columnSorting("source_mac")}</th>
-          <th>Source Address {columnSorting("source_address")}</th>
-          <th>Destination MAC {columnSorting("destination_mac")}</th>
-          <th>Destination Address {columnSorting("destination_address")}</th>
+          <th>Peer A MAC {columnSorting("source_mac")}</th>
+          <th>Peer A Address {columnSorting("source_address")}</th>
+          <th>Peer B MAC {columnSorting("destination_mac")}</th>
+          <th>Peer B Address {columnSorting("destination_address")}</th>
           <th>Streams {columnSorting("stream_count")}</th>
           <th className="hide-narrow">RTP {columnSorting("has_rtp")}</th>
           <th className="hide-narrow">DTLS {columnSorting("has_dtls")}</th>

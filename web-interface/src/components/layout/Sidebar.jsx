@@ -73,6 +73,7 @@ function Sidebar(props) {
               icon={<i className="sidebar-icon fa-solid fa-table-cells-large "/>}/>
             <NavigationLink
               href={ApiRoutes.ETHERNET.STREAMS.WEBRTC.INDEX}
+              pathMatch="/ethernet/streams/"
               title="Streams"
               icon={<i className="sidebar-icon fa-solid fa-water"/>}/>
             <NavigationLink

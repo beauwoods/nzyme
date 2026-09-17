@@ -1,4 +1,4 @@
-package app.nzyme.core.database;
+package app.nzyme.core.database.generic;
 
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;

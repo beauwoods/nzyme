@@ -14,6 +14,9 @@ import CardTitleWithControls from "../../../shared/CardTitleWithControls";
 import Filters from "../../../shared/filtering/Filters";
 import WebRTCSessionsTable from "./WebRTCSessionsTable";
 import WebRTCActiveSessionsHistogram from "./WebRTCActiveSessionsHistogram";
+import BluetoothDeviceCountHistogram from "../../../bluetooth/devices/BluetoothDeviceCountHistogram";
+import WebRTCTopPeerAssetPairHistogram from "./WebRTCTopPeerAssetPairHistogram";
+import WebRTCTopPeerAddressPairHistogram from "./WebRTCTopPeerAddressPairHistogram";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -55,6 +58,7 @@ export default function WebRTCSessionsPage() {
           <div className="card">
             <div className="card-body">
               <CardTitleWithControls title="Filters"
+                                     helpLink="https://go.nzyme.org/ethernet-webrtc"
                                      timeRange={timeRange}
                                      setTimeRange={setTimeRange}
                                      refreshAction={() => setRevision(new Date())} />
@@ -85,11 +89,44 @@ export default function WebRTCSessionsPage() {
       </div>
 
       <div className="row mt-3">
+        <div className="col-md-6">
+          <div className="card">
+            <div className="card-body">
+              <CardTitleWithControls title="Top Asset Pairs (by Bytes Exchanged)"
+                                     timeRange={timeRange}
+                                     refreshAction={() => setRevision(new Date())} />
+
+              <WebRTCTopPeerAssetPairHistogram timeRange={timeRange}
+                                               setTimeRange={setTimeRange}
+                                               filters={filters}
+                                               revision={revision} />
+
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-6">
+          <div className="card">
+            <div className="card-body">
+              <CardTitleWithControls title="Top Address Pairs (by Bytes Exchanged)"
+                                     timeRange={timeRange}
+                                     refreshAction={() => setRevision(new Date())} />
+
+              <WebRTCTopPeerAddressPairHistogram timeRange={timeRange}
+                                                 setTimeRange={setTimeRange}
+                                                 filters={filters}
+                                                 revision={revision} />
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mt-3">
         <div className="col-md-12">
           <div className="card">
             <div className="card-body">
               <CardTitleWithControls title="All Sessions"
-                                     helpLink="https://go.nzyme.org/ethernet-webrtc"
                                      timeRange={timeRange}
                                      refreshAction={() => setRevision(new Date())} />
 

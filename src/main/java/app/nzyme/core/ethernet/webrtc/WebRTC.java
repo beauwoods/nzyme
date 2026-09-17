@@ -2,6 +2,7 @@ package app.nzyme.core.ethernet.webrtc;
 
 import app.nzyme.core.NzymeNode;
 import app.nzyme.core.database.OrderDirection;
+import app.nzyme.core.database.generic.*;
 import app.nzyme.core.ethernet.Ethernet;
 import app.nzyme.core.ethernet.webrtc.db.WebRTCSessionEntry;
 import app.nzyme.core.shared.db.GenericIntegerHistogramEntry;
@@ -161,7 +162,7 @@ public class WebRTC {
                         .list()
         );
     }
-    
+
     public List<GenericIntegerHistogramEntry> getActiveSessionsHistogram(TimeRange timeRange,
                                                                          Bucketing.BucketingConfiguration bucketing,
                                                                          Filters filters,
@@ -207,6 +208,181 @@ public class WebRTC {
                         .mapTo(GenericIntegerHistogramEntry.class)
                         .list()
         );
+    }
+
+    public long getTopAssetPairsByBytesCount(TimeRange timeRange, Filters filters, List<UUID> taps) {
+        if (taps.isEmpty()) {
+            return 0;
+        }
+        FilterSqlFragment filterFragment = FilterSql.generate(filters, new WebRTCFilters());
+
+        return nzyme.getDatabase().withHandle(handle ->
+                handle.createQuery(endpointsCteByTime() +
+                                "SELECT COUNT(*) FROM (" +
+                                "SELECT LEAST(pairs.a, pairs.b) AS lo, GREATEST(pairs.a, pairs.b) AS hi FROM (" +
+                                peerPairSessionSelect(filterFragment) +
+                                ") AS pairs " +
+                                "WHERE pairs.a IS NOT NULL AND pairs.b IS NOT NULL " +
+                                "GROUP BY LEAST(pairs.a, pairs.b), GREATEST(pairs.a, pairs.b)" +
+                                ") AS distinct_pairs")
+                        .bindList("taps", taps)
+                        .bindMap(filterFragment.bindings())
+                        .bind("tr_from", timeRange.from())
+                        .bind("tr_to", timeRange.to())
+                        .mapTo(Long.class)
+                        .one()
+        );
+    }
+
+    public List<AssetPairNumberAggregationResult> getTopAssetPairsByBytes(TimeRange timeRange,
+                                                                          Filters filters,
+                                                                          int limit,
+                                                                          int offset,
+                                                                          ThreeColumnHistogramOrderColumn orderColumn,
+                                                                          OrderDirection orderDirection,
+                                                                          List<UUID> taps) {
+        if (taps.isEmpty()) {
+            return Collections.emptyList();
+        }
+        FilterSqlFragment filterFragment = FilterSql.generate(filters, new WebRTCFilters());
+
+        return nzyme.getDatabase().withHandle(handle ->
+                handle.createQuery(endpointsCteByTime() +
+                                "SELECT LEAST(pairs.a, pairs.b) AS value1, " +
+                                "GREATEST(pairs.a, pairs.b) AS value2, " +
+                                "SUM(pairs.bytes_exchanged) AS value3 FROM (" + peerPairSessionSelect(filterFragment) +
+                                ") AS pairs " +
+                                "WHERE pairs.a IS NOT NULL AND pairs.b IS NOT NULL " +
+                                "GROUP BY LEAST(pairs.a, pairs.b), GREATEST(pairs.a, pairs.b) " +
+                                "ORDER BY <order_column> <order_direction> LIMIT :limit OFFSET :offset")
+                        .bindList("taps", taps)
+                        .bindMap(filterFragment.bindings())
+                        .bind("tr_from", timeRange.from())
+                        .bind("tr_to", timeRange.to())
+                        .bind("limit", limit)
+                        .bind("offset", offset)
+                        .define("order_column", orderColumn.getColumnName())
+                        .define("order_direction", orderDirection)
+                        .mapTo(AssetPairNumberAggregationResult.class)
+                        .list()
+        );
+    }
+
+    public long getTopPeerAddressPairsByBytesCount(TimeRange timeRange, Filters filters, List<UUID> taps) {
+        if (taps.isEmpty()) {
+            return 0;
+        }
+        FilterSqlFragment filterFragment = FilterSql.generate(filters, new WebRTCFilters());
+
+        return nzyme.getDatabase().withHandle(handle ->
+                handle.createQuery(endpointsCteByTime() +
+                                "SELECT COUNT(*) FROM (" +
+                                "SELECT LEAST(a, b) AS addr1, GREATEST(a, b) AS addr2 FROM (" +
+                                peerPairSessionSelectByAddress(filterFragment) +
+                                ") AS sess WHERE a IS NOT NULL AND b IS NOT NULL " +
+                                "GROUP BY LEAST(a, b), GREATEST(a, b)" +
+                                ") AS distinct_pairs")
+                        .bindList("taps", taps)
+                        .bindMap(filterFragment.bindings())
+                        .bind("tr_from", timeRange.from())
+                        .bind("tr_to", timeRange.to())
+                        .mapTo(Long.class)
+                        .one()
+        );
+    }
+
+    public List<AddressPairNumberAggregationResult> getTopPeerAddressPairsByBytes(TimeRange timeRange,
+                                                                                  Filters filters,
+                                                                                  int limit,
+                                                                                  int offset,
+                                                                                  ThreeColumnHistogramOrderColumn orderColumn,
+                                                                                  OrderDirection orderDirection,
+                                                                                  List<UUID> taps) {
+        if (taps.isEmpty()) {
+            return Collections.emptyList();
+        }
+        FilterSqlFragment filterFragment = FilterSql.generate(filters, new WebRTCFilters());
+
+        return nzyme.getDatabase().withHandle(handle ->
+                handle.createQuery(endpointsCteByTime() + ", " +
+                                "address_attrs AS (" +
+                                "SELECT DISTINCT ON (addr) addr, mac, port, " +
+                                "geo_asn_number, geo_asn_name, geo_asn_domain, geo_city, " +
+                                "geo_country_code, geo_latitude, geo_longitude, " +
+                                "is_site_local, is_loopback, is_multicast FROM (" +
+                                "SELECT source_address AS addr, source_mac AS mac, source_port AS port, " +
+                                "source_address_geo_asn_number AS geo_asn_number, source_address_geo_asn_name AS geo_asn_name, " +
+                                "source_address_geo_asn_domain AS geo_asn_domain, source_address_geo_city AS geo_city, " +
+                                "source_address_geo_country_code AS geo_country_code, source_address_geo_latitude AS geo_latitude, " +
+                                "source_address_geo_longitude AS geo_longitude, source_address_is_site_local AS is_site_local, " +
+                                "source_address_is_loopback AS is_loopback, source_address_is_multicast AS is_multicast " +
+                                "FROM conversation_endpoints " +
+                                "UNION ALL " +
+                                "SELECT destination_address, destination_mac, destination_port, " +
+                                "destination_address_geo_asn_number, destination_address_geo_asn_name, " +
+                                "destination_address_geo_asn_domain, destination_address_geo_city, " +
+                                "destination_address_geo_country_code, destination_address_geo_latitude, " +
+                                "destination_address_geo_longitude, destination_address_is_site_local, " +
+                                "destination_address_is_loopback, destination_address_is_multicast " +
+                                "FROM conversation_endpoints" +
+                                ") AS all_addrs WHERE addr IS NOT NULL ORDER BY addr" +
+                                "), " +
+                                "pairs AS (" +
+                                "SELECT LEAST(a, b) AS addr1, GREATEST(a, b) AS addr2, SUM(bytes_exchanged) AS value FROM (" +
+                                peerPairSessionSelectByAddress(filterFragment) +
+                                ") AS sess WHERE a IS NOT NULL AND b IS NOT NULL " +
+                                "GROUP BY LEAST(a, b), GREATEST(a, b)" +
+                                ") " +
+                                "SELECT host(p.addr1) AS value1, host(p.addr1) AS value1_address, a1.mac AS value1_mac, a1.port AS value1_port, " +
+                                "a1.geo_asn_number AS value1_address_geo_asn_number, a1.geo_asn_name AS value1_address_geo_asn_name, " +
+                                "a1.geo_asn_domain AS value1_address_geo_asn_domain, a1.geo_city AS value1_address_geo_city, " +
+                                "a1.geo_country_code AS value1_address_geo_country_code, a1.geo_latitude AS value1_address_geo_latitude, " +
+                                "a1.geo_longitude AS value1_address_geo_longitude, a1.is_site_local AS value1_address_is_site_local, " +
+                                "a1.is_loopback AS value1_address_is_loopback, a1.is_multicast AS value1_address_is_multicast, " +
+                                "host(p.addr2) AS value2, host(p.addr2) AS value2_address, a2.mac AS value2_mac, a2.port AS value2_port, " +
+                                "a2.geo_asn_number AS value2_address_geo_asn_number, a2.geo_asn_name AS value2_address_geo_asn_name, " +
+                                "a2.geo_asn_domain AS value2_address_geo_asn_domain, a2.geo_city AS value2_address_geo_city, " +
+                                "a2.geo_country_code AS value2_address_geo_country_code, a2.geo_latitude AS value2_address_geo_latitude, " +
+                                "a2.geo_longitude AS value2_address_geo_longitude, a2.is_site_local AS value2_address_is_site_local, " +
+                                "a2.is_loopback AS value2_address_is_loopback, a2.is_multicast AS value2_address_is_multicast, " +
+                                "p.value AS value3 " +
+                                "FROM pairs AS p " +
+                                "LEFT JOIN address_attrs AS a1 ON a1.addr = p.addr1 " +
+                                "LEFT JOIN address_attrs AS a2 ON a2.addr = p.addr2 " +
+                                "ORDER BY <order_column> <order_direction> LIMIT :limit OFFSET :offset")
+                        .bindList("taps", taps)
+                        .bindMap(filterFragment.bindings())
+                        .bind("tr_from", timeRange.from())
+                        .bind("tr_to", timeRange.to())
+                        .bind("limit", limit)
+                        .bind("offset", offset)
+                        .define("order_column", orderColumn.getColumnName())
+                        .define("order_direction", orderDirection)
+                        .mapTo(AddressPairNumberAggregationResult.class)
+                        .list()
+        );
+    }
+
+    private String peerPairSessionSelectByAddress(FilterSqlFragment filterFragment) {
+        return "SELECT MAX(s.source_address) AS a, MAX(s.destination_address) AS b, " +
+                "MAX(sb.bytes_exchanged) AS bytes_exchanged " +
+                "FROM webrtc_conversations AS w " +
+                "LEFT JOIN endpoints AS s ON s.negotiation_key = w.negotiation_key " +
+                "LEFT JOIN session_bytes AS sb ON sb.negotiation_key = w.negotiation_key " +
+                "WHERE w.last_activity >= :tr_from AND w.last_activity <= :tr_to " +
+                "AND w.tap_uuid IN (<taps>)" + filterFragment.whereSql() +
+                " GROUP BY w.negotiation_key HAVING 1=1 " + filterFragment.havingSql();
+    }
+
+    private String peerPairSessionSelect(FilterSqlFragment filterFragment) {
+        return "SELECT MAX(s.source_mac) AS a, MAX(s.destination_mac) AS b, " +
+                "MAX(sb.bytes_exchanged) AS bytes_exchanged " +
+                "FROM webrtc_conversations AS w " +
+                "LEFT JOIN endpoints AS s ON s.negotiation_key = w.negotiation_key " +
+                "LEFT JOIN session_bytes AS sb ON sb.negotiation_key = w.negotiation_key " +
+                "WHERE w.last_activity >= :tr_from AND w.last_activity <= :tr_to " +
+                "AND w.tap_uuid IN (<taps>)" + filterFragment.whereSql() +
+                " GROUP BY w.negotiation_key HAVING 1=1 " + filterFragment.havingSql();
     }
 
     private String endpointsCteByTime() {
