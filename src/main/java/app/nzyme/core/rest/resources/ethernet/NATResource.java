@@ -11,6 +11,7 @@ import app.nzyme.core.ethernet.nat.NAT;
 import app.nzyme.core.ethernet.nat.db.NATTraversalDiscoveryEntry;
 import app.nzyme.core.ethernet.nat.db.NATTraversalDiscoveryHistogramBucket;
 import app.nzyme.core.ethernet.nat.db.STUNNegotiationEntry;
+import app.nzyme.core.ethernet.webrtc.db.WebRTCSessionEntry;
 import app.nzyme.core.rest.RestHelpers;
 import app.nzyme.core.rest.TapDataHandlingResource;
 import app.nzyme.core.rest.responses.ethernet.*;
@@ -46,6 +47,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static app.nzyme.core.rest.misc.WebRTCHelper.buildWebRTCSessionDetailsResponse;
 import static app.nzyme.core.util.filters.FilterParser.parseFiltersQueryParameter;
 
 @Path("/api/ethernet/nat")
@@ -362,7 +364,7 @@ public class NATResource extends TapDataHandlingResource {
         List<NATSTUNNegotiationDetailsResponse> negotiations = Lists.newArrayList();
         for (STUNNegotiationEntry negotiation : nzyme.getEthernet().nat()
                 .findAllNegotiations(timeRange, filters, orderColumn, orderDirection, limit, offset, taps)) {
-            negotiations.add(buildNegotiationDetailsResponse(negotiation, null, organizationId, tenantId));
+            negotiations.add(buildNegotiationDetailsResponse(negotiation, null, null, organizationId, tenantId));
         }
 
         return Response.ok(NATSTUNNegotiationsListResponse.create(total, negotiations)).build();
@@ -389,15 +391,30 @@ public class NATResource extends TapDataHandlingResource {
 
         List<NATSTUNNegotiationDetailsResponse> flows = Lists.newArrayList();
         for (STUNNegotiationEntry flow : nzyme.getEthernet().nat().findFlowsOfNegotiation(negotiation.get().negotiationKeySha256(), taps)) {
-            flows.add(buildNegotiationDetailsResponse(flow, null, organizationId, tenantId));
+            flows.add(buildNegotiationDetailsResponse(flow, null, null, organizationId, tenantId));
         }
 
+        // Find related connections if there are any.
+        Map<String, Object> relatedConnections = Maps.newHashMap();
 
-        return Response.ok(buildNegotiationDetailsResponse(negotiation.get(), flows, organizationId, tenantId)).build();
+        // WebRTC.
+        Optional<WebRTCSessionEntry> webRtcSession = nzyme.getEthernet()
+                .webRtc()
+                .findOneSession(negotiation.get().negotiationKeySha256(), taps);
+
+        if (webRtcSession.isPresent()) {
+            relatedConnections.put(
+                    "webrtc",
+                    buildWebRTCSessionDetailsResponse(webRtcSession.get(), nzyme, organizationId, tenantId)
+            );
+        }
+
+        return Response.ok(buildNegotiationDetailsResponse(negotiation.get(), flows, relatedConnections, organizationId, tenantId)).build();
     }
 
     private NATSTUNNegotiationDetailsResponse buildNegotiationDetailsResponse(STUNNegotiationEntry negotiation,
                                                                               List<NATSTUNNegotiationDetailsResponse> flows,
+                                                                              @Nullable Map<String, Object> relatedConnections,
                                                                               UUID organizationId,
                                                                               UUID tenantId) {
         L4AddressResponse source = null;
@@ -464,6 +481,8 @@ public class NATResource extends TapDataHandlingResource {
                 peerAddresses,
                 relayedAddresses,
                 flows,
+                negotiation.l4Tags(),
+                relatedConnections,
                 negotiation.firstSeen(),
                 negotiation.lastActivity()
         );

@@ -8,6 +8,7 @@ import org.joda.time.DateTime;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
+import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -24,6 +25,9 @@ public class STUNNegotiationEntryMapper implements RowMapper<STUNNegotiationEntr
         L4AddressData destination = rs.getString("destination_address") == null
                 ? null : L4MapperTools.fieldsToAddressData("destination", rs);
 
+        List<String> tags = OM.readValue(rs.getString("tags"), new TypeReference<>() {});
+        tags.removeIf(s -> s.equals("STUN") || s.equals("TURN"));
+
         return STUNNegotiationEntry.create(
                 rs.getString("negotiation_key"),
                 rs.getString("negotiation_key_sha256"),
@@ -37,6 +41,7 @@ public class STUNNegotiationEntryMapper implements RowMapper<STUNNegotiationEntr
                 parseAddressArray(rs, "mapped_addresses"),
                 parseAddressArray(rs, "peer_addresses"),
                 parseAddressArray(rs, "relayed_addresses"),
+                tags,
                 new DateTime(rs.getTimestamp("first_seen")),
                 new DateTime(rs.getTimestamp("last_activity"))
         );

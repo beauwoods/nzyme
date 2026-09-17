@@ -10,7 +10,6 @@ import LoadingSpinner from "../../../../misc/LoadingSpinner";
 import NATService from "../../../../../services/ethernet/NATService";
 import STUNConnectionSuccessIndicator from "./STUNConnectionSuccessIndicator";
 import STUNConnectionActiveIndicator from "./STUNConnectionActiveIndicator";
-
 import numeral from "numeral";
 import L4Address from "../../../shared/L4Address";
 import InternalAddressOnlyWrapper from "../../../shared/InternalAddressOnlyWrapper";
@@ -18,6 +17,8 @@ import EthernetMacAddress from "../../../../shared/context/macs/EthernetMacAddre
 import moment from "moment";
 import L4AddressList from "../../../shared/L4AddressList";
 import FullCopyShortenedId from "../../../../shared/FullCopyShortenedId";
+import WebRTCSessionsTableRow from "../../../streams/webrtc/WebRTCSessionsTableRow";
+import WebRTCSessionsTableHead from "../../../streams/webrtc/WebRTCSessionsTableHead";
 
 const natService = new NATService();
 
@@ -157,6 +158,35 @@ export default function STUNConnectionDetailsPage() {
         })}
         </tbody>
       </table>
+    )
+  }
+
+  const webRTC = () => {
+    if (!connection.related_connections || !connection.related_connections["webrtc"]) {
+      return null;
+    }
+
+    const data = connection.related_connections["webrtc"];
+
+    return (
+      <div className="row mt-3">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-body">
+              <CardTitleWithControls title="Encapsulated WebRTC Connection" />
+
+              <table className="table table-sm table-striped">
+                <thead>
+                <WebRTCSessionsTableHead />
+                </thead>
+                <tbody>
+                  <WebRTCSessionsTableRow session={data} setFilters={null} />
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -328,6 +358,8 @@ export default function STUNConnectionDetailsPage() {
           </div>
         </div>
       </div>
+
+      {webRTC()}
 
     </React.Fragment>
   )

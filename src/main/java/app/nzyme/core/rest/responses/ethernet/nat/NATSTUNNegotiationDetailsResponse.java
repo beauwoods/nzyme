@@ -7,6 +7,7 @@ import jakarta.annotation.Nullable;
 import org.joda.time.DateTime;
 
 import java.util.List;
+import java.util.Map;
 
 @AutoValue
 public abstract class NATSTUNNegotiationDetailsResponse {
@@ -50,13 +51,19 @@ public abstract class NATSTUNNegotiationDetailsResponse {
     @Nullable @JsonProperty("flows")
     public abstract List<NATSTUNNegotiationDetailsResponse> flows();
 
+    @JsonProperty("l4_tags")
+    public abstract List<String> l4Tags();
+
+    @Nullable @JsonProperty("related_connections")
+    public abstract Map<String, Object> relatedConnections();
+
     @JsonProperty("first_seen")
     public abstract DateTime firstSeen();
 
     @JsonProperty("last_activity")
     public abstract DateTime lastActivity();
 
-    public static NATSTUNNegotiationDetailsResponse create(String negotiationKey, String negotiationKeySha256, boolean isActive, String transport, boolean successful, boolean isTurn, Long bytesExchanged, L4AddressResponse source, L4AddressResponse destination, List<L4AddressResponse> mappedAddresses, List<L4AddressResponse> peerAddresses, List<L4AddressResponse> relayedAddresses, List<NATSTUNNegotiationDetailsResponse> flows, DateTime firstSeen, DateTime lastActivity) {
+    public static NATSTUNNegotiationDetailsResponse create(String negotiationKey, String negotiationKeySha256, boolean isActive, String transport, boolean successful, boolean isTurn, Long bytesExchanged, L4AddressResponse source, L4AddressResponse destination, List<L4AddressResponse> mappedAddresses, List<L4AddressResponse> peerAddresses, List<L4AddressResponse> relayedAddresses, List<NATSTUNNegotiationDetailsResponse> flows, List<String> l4Tags, Map<String, Object> relatedConnections, DateTime firstSeen, DateTime lastActivity) {
         return builder()
                 .negotiationKey(negotiationKey)
                 .negotiationKeySha256(negotiationKeySha256)
@@ -71,6 +78,8 @@ public abstract class NATSTUNNegotiationDetailsResponse {
                 .peerAddresses(peerAddresses)
                 .relayedAddresses(relayedAddresses)
                 .flows(flows)
+                .l4Tags(l4Tags)
+                .relatedConnections(relatedConnections)
                 .firstSeen(firstSeen)
                 .lastActivity(lastActivity)
                 .build();
@@ -107,6 +116,10 @@ public abstract class NATSTUNNegotiationDetailsResponse {
         public abstract Builder relayedAddresses(List<L4AddressResponse> relayedAddresses);
 
         public abstract Builder flows(List<NATSTUNNegotiationDetailsResponse> flows);
+
+        public abstract Builder l4Tags(List<String> l4Tags);
+
+        public abstract Builder relatedConnections(Map<String, Object> relatedConnections);
 
         public abstract Builder firstSeen(DateTime firstSeen);
 

@@ -25,10 +25,11 @@ public abstract class STUNNegotiationEntry {
     public abstract List<L4AddressData> mappedAddresses();
     public abstract List<L4AddressData> peerAddresses();
     public abstract List<L4AddressData> relayedAddresses();
+    public abstract List<String> l4Tags();
     public abstract DateTime firstSeen();
     public abstract DateTime lastActivity();
 
-    public static STUNNegotiationEntry create(String negotiationKey, String negotiationKeySha256, boolean isActive, String transport, boolean successful, boolean isTurn, Long bytesExchanged, L4AddressData source, L4AddressData destination, List<L4AddressData> mappedAddresses, List<L4AddressData> peerAddresses, List<L4AddressData> relayedAddresses, DateTime firstSeen, DateTime lastActivity) {
+    public static STUNNegotiationEntry create(String negotiationKey, String negotiationKeySha256, boolean isActive, String transport, boolean successful, boolean isTurn, Long bytesExchanged, L4AddressData source, L4AddressData destination, List<L4AddressData> mappedAddresses, List<L4AddressData> peerAddresses, List<L4AddressData> relayedAddresses, List<String> l4Tags, DateTime firstSeen, DateTime lastActivity) {
         return builder()
                 .negotiationKey(negotiationKey)
                 .negotiationKeySha256(negotiationKeySha256)
@@ -42,6 +43,7 @@ public abstract class STUNNegotiationEntry {
                 .mappedAddresses(mappedAddresses)
                 .peerAddresses(peerAddresses)
                 .relayedAddresses(relayedAddresses)
+                .l4Tags(l4Tags)
                 .firstSeen(firstSeen)
                 .lastActivity(lastActivity)
                 .build();
@@ -76,6 +78,8 @@ public abstract class STUNNegotiationEntry {
         public abstract Builder peerAddresses(List<L4AddressData> peerAddresses);
 
         public abstract Builder relayedAddresses(List<L4AddressData> relayedAddresses);
+
+        public abstract Builder l4Tags(List<String> l4Tags);
 
         public abstract Builder firstSeen(DateTime firstSeen);
 

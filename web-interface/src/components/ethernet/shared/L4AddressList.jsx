@@ -28,7 +28,7 @@ export default function L4AddressList({addresses, setFilters, fields, field, cou
     return (
       <ul style={{listStyleType: "none"}} className="m-0 p-0">
         {shown.map((address, i) => {
-          return <li>{element(address, i)}</li>
+          return <li key={i}>{element(address, i)}</li>
         })}
       </ul>
     )

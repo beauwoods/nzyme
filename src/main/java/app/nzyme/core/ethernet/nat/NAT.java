@@ -466,7 +466,8 @@ public class NAT {
                                 "BOOL_OR(s.destination_address_is_multicast) FILTER (WHERE n.successful) AS destination_address_is_multicast, " +
                                 "COALESCE(jsonb_agg(DISTINCT me.elem) FILTER (WHERE me.elem IS NOT NULL), '[]'::jsonb) AS mapped_addresses, " +
                                 "COALESCE(jsonb_agg(DISTINCT pe.elem) FILTER (WHERE pe.elem IS NOT NULL), '[]'::jsonb) AS peer_addresses, " +
-                                "COALESCE(jsonb_agg(DISTINCT re.elem) FILTER (WHERE re.elem IS NOT NULL), '[]'::jsonb) AS relayed_addresses " +
+                                "COALESCE(jsonb_agg(DISTINCT re.elem) FILTER (WHERE re.elem IS NOT NULL), '[]'::jsonb) AS relayed_addresses, " +
+                                "COALESCE(jsonb_agg(DISTINCT te.elem) FILTER (WHERE te.elem IS NOT NULL), '[]'::jsonb) AS tags " +
                                 "FROM nat_stun_negotiation_flows AS n " +
                                 "LEFT JOIN l4_sessions AS s ON s.session_key = n.l4_session_key " +
                                 "AND s.start_time >= n.first_seen - INTERVAL '10 seconds' " +
@@ -475,6 +476,7 @@ public class NAT {
                                 "LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(n.mapped_addresses) = 'array' THEN n.mapped_addresses ELSE '[]'::jsonb END) AS me(elem) ON true " +
                                 "LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(n.peer_addresses) = 'array' THEN n.peer_addresses ELSE '[]'::jsonb END) AS pe(elem) ON true " +
                                 "LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(n.relayed_addresses) = 'array' THEN n.relayed_addresses ELSE '[]'::jsonb END) AS re(elem) ON true " +
+                                "LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(s.tags) = 'array' THEN s.tags ELSE '[]'::jsonb END) AS te(elem) ON true " +
                                 "WHERE n.last_activity >= :tr_from AND n.last_activity <= :tr_to " +
                                 "AND n.tap_uuid IN (<taps>)" + filterFragment.whereSql() +
                                 " GROUP BY n.negotiation_key HAVING 1=1 " + filterFragment.havingSql() +
@@ -535,7 +537,8 @@ public class NAT {
                                 "BOOL_OR(s.destination_address_is_multicast) FILTER (WHERE n.successful) AS destination_address_is_multicast, " +
                                 "COALESCE(jsonb_agg(DISTINCT me.elem) FILTER (WHERE me.elem IS NOT NULL), '[]'::jsonb) AS mapped_addresses, " +
                                 "COALESCE(jsonb_agg(DISTINCT pe.elem) FILTER (WHERE pe.elem IS NOT NULL), '[]'::jsonb) AS peer_addresses, " +
-                                "COALESCE(jsonb_agg(DISTINCT re.elem) FILTER (WHERE re.elem IS NOT NULL), '[]'::jsonb) AS relayed_addresses " +
+                                "COALESCE(jsonb_agg(DISTINCT re.elem) FILTER (WHERE re.elem IS NOT NULL), '[]'::jsonb) AS relayed_addresses, " +
+                                "COALESCE(jsonb_agg(DISTINCT te.elem) FILTER (WHERE te.elem IS NOT NULL), '[]'::jsonb) AS tags " +
                                 "FROM nat_stun_negotiation_flows AS n " +
                                 "LEFT JOIN l4_sessions AS s ON s.session_key = n.l4_session_key " +
                                 "AND s.start_time >= n.first_seen - INTERVAL '10 seconds' " +
@@ -544,6 +547,7 @@ public class NAT {
                                 "LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(n.mapped_addresses) = 'array' THEN n.mapped_addresses ELSE '[]'::jsonb END) AS me(elem) ON true " +
                                 "LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(n.peer_addresses) = 'array' THEN n.peer_addresses ELSE '[]'::jsonb END) AS pe(elem) ON true " +
                                 "LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(n.relayed_addresses) = 'array' THEN n.relayed_addresses ELSE '[]'::jsonb END) AS re(elem) ON true " +
+                                "LEFT JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_typeof(s.tags) = 'array' THEN s.tags ELSE '[]'::jsonb END) AS te(elem) ON true " +
                                 "WHERE n.negotiation_key_sha256 = :negotiation_key_sha256 AND n.tap_uuid IN (<taps>) " +
                                 "GROUP BY n.negotiation_key")
                         .bindList("taps", taps)
@@ -575,7 +579,8 @@ public class NAT {
                                 "s.destination_address_geo_country_code, s.destination_address_geo_latitude, " +
                                 "s.destination_address_geo_longitude, s.destination_address_is_site_local, " +
                                 "s.destination_address_is_loopback, s.destination_address_is_multicast, " +
-                                "n.mapped_addresses, n.peer_addresses, n.relayed_addresses " +
+                                "n.mapped_addresses, n.peer_addresses, n.relayed_addresses, " +
+                                "COALESCE(s.tags, '[]'::jsonb) AS tags " +
                                 "FROM nat_stun_negotiation_flows AS n " +
                                 "LEFT JOIN l4_sessions AS s ON s.session_key = n.l4_session_key " +
                                 "AND s.start_time >= n.first_seen - INTERVAL '10 seconds' " +

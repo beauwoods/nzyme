@@ -16,6 +16,7 @@ import FullCopyShortenedId from "../../../../shared/FullCopyShortenedId";
 import ApiRoutes from "../../../../../util/ApiRoutes";
 import STUNConnectionActiveIndicator from "./STUNConnectionActiveIndicator";
 import STUNConnectionSuccessIndicator from "./STUNConnectionSuccessIndicator";
+import STUNConnectionL4Tags from "./STUNConnectionL4Tags";
 
 const natService = new NATService();
 
@@ -80,6 +81,7 @@ export default function STUNConnectionsTable({timeRange, filters, setFilters, re
           <th>Destination MAC {columnSorting("destination_mac")}</th>
           <th>Destination Address {columnSorting("destination_address")}</th>
           <th>TURN {columnSorting("is_turn")}</th>
+          <th>Tags</th>
           <th title="Mapped Addresses" className="hide-narrow">M</th>
           <th title="Peer Addresses" className="hide-narrow">P</th>
           <th title="Relayed Addresses" className="hide-narrow">R</th>
@@ -130,6 +132,7 @@ export default function STUNConnectionsTable({timeRange, filters, setFilters, re
                                                                            value={n.destination.address} /> : null } />
               </td>
               <td>{n.is_turn ? "True" : "False"}</td>
+              <td><STUNConnectionL4Tags tags={n.l4_tags} setFilters={setFilters} /></td>
               <td className="hide-narrow">{numeral(n.mapped_addresses.length).format("0,0")}</td>
               <td className="hide-narrow">{numeral(n.peer_addresses.length).format("0,0")}</td>
               <td className="hide-narrow">{numeral(n.relayed_addresses.length).format("0,0")}</td>
