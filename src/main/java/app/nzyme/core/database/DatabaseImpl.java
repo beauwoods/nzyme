@@ -416,31 +416,26 @@ public class DatabaseImpl implements Database {
                         "SELECT COUNT(*) FROM arp_packets WHERE tap_uuid IN (<taps>)",
                         "DELETE FROM arp_packets WHERE timestamp < :since AND tap_uuid IN (<taps>)"
                 ));
-
                 tables.add(new DataTableInformation(
                         "dhcp_transactions",
                         "SELECT COUNT(*) FROM dhcp_transactions WHERE tap_uuid IN (<taps>)",
                         "DELETE FROM dhcp_transactions WHERE latest_packet < :since AND tap_uuid IN (<taps>)"
                 ));
-
                 tables.add(new DataTableInformation(
                         "l4_sessions",
                         "SELECT COUNT(*) FROM l4_sessions WHERE tap_uuid IN (<taps>)",
                         "DELETE FROM l4_sessions WHERE most_recent_segment_time < :since AND tap_uuid IN (<taps>)"
                 ));
-
                 tables.add(new DataTableInformation(
                         "l4_statistics",
                         "SELECT COUNT(*) FROM l4_statistics WHERE tap_uuid IN (<taps>)",
                         "DELETE FROM l4_statistics WHERE timestamp < :since AND tap_uuid IN (<taps>)"
                 ));
-
                 tables.add(new DataTableInformation(
                         "ssh_sessions",
                         "SELECT COUNT(*) FROM ssh_sessions WHERE tap_uuid IN (<taps>)",
                         "DELETE FROM ssh_sessions WHERE most_recent_segment_time < :since AND tap_uuid IN (<taps>)"
                 ));
-
                 tables.add(new DataTableInformation(
                         "socks_tunnels",
                         "SELECT COUNT(*) FROM socks_tunnels WHERE tap_uuid IN (<taps>)",
@@ -460,6 +455,16 @@ public class DatabaseImpl implements Database {
                         "nat_stun_negotiation_flows",
                         "SELECT COUNT(*) FROM nat_stun_negotiation_flows WHERE tap_uuid IN (<taps>)",
                         "DELETE FROM nat_stun_negotiation_flows WHERE last_activity < :since AND tap_uuid IN (<taps>)"
+                ));
+                tables.add(new DataTableInformation(
+                        "rtsp_streams",
+                        "SELECT COUNT(*) FROM rtsp_streams WHERE tap_uuid IN (<taps>)",
+                        "DELETE FROM rtsp_streams WHERE setup_most_recent_segment_time < :since AND tap_uuid IN (<taps>)"
+                ));
+                tables.add(new DataTableInformation(
+                        "webrtc_conversations",
+                        "SELECT COUNT(*) FROM webrtc_conversations WHERE tap_uuid IN (<taps>)",
+                        "DELETE FROM webrtc_conversations WHERE last_activity < :since AND tap_uuid IN (<taps>)"
                 ));
             }
             case ETHERNET_DNS -> {
