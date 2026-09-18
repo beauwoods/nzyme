@@ -438,32 +438,32 @@ public class NAT {
                                 "MAX(n.last_activity) AS last_activity," +
                                 "(MAX(s.most_recent_segment_time) >= NOW() - INTERVAL '60 seconds') AS is_active, " +
                                 "MAX(s.bytes_rx_count+s.bytes_tx_count) AS bytes_exchanged, " +
-                                "MAX(s.source_mac) FILTER (WHERE n.successful) AS source_mac, " +
-                                "MAX(s.source_address) FILTER (WHERE n.successful) AS source_address, " +
-                                "MAX(s.source_port) FILTER (WHERE n.successful) AS source_port, " +
-                                "MAX(s.source_address_geo_asn_number) FILTER (WHERE n.successful) AS source_address_geo_asn_number, " +
-                                "MAX(s.source_address_geo_asn_name) FILTER (WHERE n.successful) AS source_address_geo_asn_name, " +
-                                "MAX(s.source_address_geo_asn_domain) FILTER (WHERE n.successful) AS source_address_geo_asn_domain, " +
-                                "MAX(s.source_address_geo_city) FILTER (WHERE n.successful) AS source_address_geo_city, " +
-                                "MAX(s.source_address_geo_country_code) FILTER (WHERE n.successful) AS source_address_geo_country_code, " +
-                                "MAX(s.source_address_geo_latitude) FILTER (WHERE n.successful) AS source_address_geo_latitude, " +
-                                "MAX(s.source_address_geo_longitude) FILTER (WHERE n.successful) AS source_address_geo_longitude, " +
-                                "BOOL_OR(s.source_address_is_site_local) FILTER (WHERE n.successful) AS source_address_is_site_local, " +
-                                "BOOL_OR(s.source_address_is_loopback) FILTER (WHERE n.successful) AS source_address_is_loopback, " +
-                                "BOOL_OR(s.source_address_is_multicast) FILTER (WHERE n.successful) AS source_address_is_multicast, " +
-                                "MAX(s.destination_mac) FILTER (WHERE n.successful) AS destination_mac, " +
-                                "MAX(s.destination_address) FILTER (WHERE n.successful) AS destination_address, " +
-                                "MAX(s.destination_port) FILTER (WHERE n.successful) AS destination_port, " +
-                                "MAX(s.destination_address_geo_asn_number) FILTER (WHERE n.successful) AS destination_address_geo_asn_number, " +
-                                "MAX(s.destination_address_geo_asn_name) FILTER (WHERE n.successful) AS destination_address_geo_asn_name, " +
-                                "MAX(s.destination_address_geo_asn_domain) FILTER (WHERE n.successful) AS destination_address_geo_asn_domain, " +
-                                "MAX(s.destination_address_geo_city) FILTER (WHERE n.successful) AS destination_address_geo_city, " +
-                                "MAX(s.destination_address_geo_country_code) FILTER (WHERE n.successful) AS destination_address_geo_country_code, " +
-                                "MAX(s.destination_address_geo_latitude) FILTER (WHERE n.successful) AS destination_address_geo_latitude, " +
-                                "MAX(s.destination_address_geo_longitude) FILTER (WHERE n.successful) AS destination_address_geo_longitude, " +
-                                "BOOL_OR(s.destination_address_is_site_local) FILTER (WHERE n.successful) AS destination_address_is_site_local, " +
-                                "BOOL_OR(s.destination_address_is_loopback) FILTER (WHERE n.successful) AS destination_address_is_loopback, " +
-                                "BOOL_OR(s.destination_address_is_multicast) FILTER (WHERE n.successful) AS destination_address_is_multicast, " +
+                                "COALESCE(MAX(s.source_mac) FILTER (WHERE n.successful), MAX(s.source_mac)) AS source_mac, " +
+                                "COALESCE(MAX(s.source_address) FILTER (WHERE n.successful), MAX(s.source_address)) AS source_address, " +
+                                "COALESCE(MAX(s.source_port) FILTER (WHERE n.successful), MAX(s.source_port)) AS source_port, " +
+                                "COALESCE(MAX(s.source_address_geo_asn_number) FILTER (WHERE n.successful), MAX(s.source_address_geo_asn_number)) AS source_address_geo_asn_number, " +
+                                "COALESCE(MAX(s.source_address_geo_asn_name) FILTER (WHERE n.successful), MAX(s.source_address_geo_asn_name)) AS source_address_geo_asn_name, " +
+                                "COALESCE(MAX(s.source_address_geo_asn_domain) FILTER (WHERE n.successful), MAX(s.source_address_geo_asn_domain)) AS source_address_geo_asn_domain, " +
+                                "COALESCE(MAX(s.source_address_geo_city) FILTER (WHERE n.successful), MAX(s.source_address_geo_city)) AS source_address_geo_city, " +
+                                "COALESCE(MAX(s.source_address_geo_country_code) FILTER (WHERE n.successful), MAX(s.source_address_geo_country_code)) AS source_address_geo_country_code, " +
+                                "COALESCE(MAX(s.source_address_geo_latitude) FILTER (WHERE n.successful), MAX(s.source_address_geo_latitude)) AS source_address_geo_latitude, " +
+                                "COALESCE(MAX(s.source_address_geo_longitude) FILTER (WHERE n.successful), MAX(s.source_address_geo_longitude)) AS source_address_geo_longitude, " +
+                                "COALESCE(BOOL_OR(s.source_address_is_site_local) FILTER (WHERE n.successful), BOOL_OR(s.source_address_is_site_local)) AS source_address_is_site_local, " +
+                                "COALESCE(BOOL_OR(s.source_address_is_loopback) FILTER (WHERE n.successful), BOOL_OR(s.source_address_is_loopback)) AS source_address_is_loopback, " +
+                                "COALESCE(BOOL_OR(s.source_address_is_multicast) FILTER (WHERE n.successful), BOOL_OR(s.source_address_is_multicast)) AS source_address_is_multicast, " +
+                                "COALESCE(MAX(s.destination_mac) FILTER (WHERE n.successful), MAX(s.destination_mac)) AS destination_mac, " +
+                                "COALESCE(MAX(s.destination_address) FILTER (WHERE n.successful), MAX(s.destination_address)) AS destination_address, " +
+                                "COALESCE(MAX(s.destination_port) FILTER (WHERE n.successful), MAX(s.destination_port)) AS destination_port, " +
+                                "COALESCE(MAX(s.destination_address_geo_asn_number) FILTER (WHERE n.successful), MAX(s.destination_address_geo_asn_number)) AS destination_address_geo_asn_number, " +
+                                "COALESCE(MAX(s.destination_address_geo_asn_name) FILTER (WHERE n.successful), MAX(s.destination_address_geo_asn_name)) AS destination_address_geo_asn_name, " +
+                                "COALESCE(MAX(s.destination_address_geo_asn_domain) FILTER (WHERE n.successful), MAX(s.destination_address_geo_asn_domain)) AS destination_address_geo_asn_domain, " +
+                                "COALESCE(MAX(s.destination_address_geo_city) FILTER (WHERE n.successful), MAX(s.destination_address_geo_city)) AS destination_address_geo_city, " +
+                                "COALESCE(MAX(s.destination_address_geo_country_code) FILTER (WHERE n.successful), MAX(s.destination_address_geo_country_code)) AS destination_address_geo_country_code, " +
+                                "COALESCE(MAX(s.destination_address_geo_latitude) FILTER (WHERE n.successful), MAX(s.destination_address_geo_latitude)) AS destination_address_geo_latitude, " +
+                                "COALESCE(MAX(s.destination_address_geo_longitude) FILTER (WHERE n.successful), MAX(s.destination_address_geo_longitude)) AS destination_address_geo_longitude, " +
+                                "COALESCE(BOOL_OR(s.destination_address_is_site_local) FILTER (WHERE n.successful), BOOL_OR(s.destination_address_is_site_local)) AS destination_address_is_site_local, " +
+                                "COALESCE(BOOL_OR(s.destination_address_is_loopback) FILTER (WHERE n.successful), BOOL_OR(s.destination_address_is_loopback)) AS destination_address_is_loopback, " +
+                                "COALESCE(BOOL_OR(s.destination_address_is_multicast) FILTER (WHERE n.successful), BOOL_OR(s.destination_address_is_multicast)) AS destination_address_is_multicast, " +
                                 "COALESCE(jsonb_agg(DISTINCT me.elem) FILTER (WHERE me.elem IS NOT NULL), '[]'::jsonb) AS mapped_addresses, " +
                                 "COALESCE(jsonb_agg(DISTINCT pe.elem) FILTER (WHERE pe.elem IS NOT NULL), '[]'::jsonb) AS peer_addresses, " +
                                 "COALESCE(jsonb_agg(DISTINCT re.elem) FILTER (WHERE re.elem IS NOT NULL), '[]'::jsonb) AS relayed_addresses, " +
@@ -509,32 +509,32 @@ public class NAT {
                                 "MAX(n.last_activity) AS last_activity, " +
                                 "(MAX(n.last_activity) >= NOW() - INTERVAL '60 seconds') AS is_active, " +
                                 "MAX(s.bytes_rx_count+s.bytes_tx_count) AS bytes_exchanged, " +
-                                "MAX(s.source_mac) FILTER (WHERE n.successful) AS source_mac, " +
-                                "MAX(s.source_address) FILTER (WHERE n.successful) AS source_address, " +
-                                "MAX(s.source_port) FILTER (WHERE n.successful) AS source_port, " +
-                                "MAX(s.source_address_geo_asn_number) FILTER (WHERE n.successful) AS source_address_geo_asn_number, " +
-                                "MAX(s.source_address_geo_asn_name) FILTER (WHERE n.successful) AS source_address_geo_asn_name, " +
-                                "MAX(s.source_address_geo_asn_domain) FILTER (WHERE n.successful) AS source_address_geo_asn_domain, " +
-                                "MAX(s.source_address_geo_city) FILTER (WHERE n.successful) AS source_address_geo_city, " +
-                                "MAX(s.source_address_geo_country_code) FILTER (WHERE n.successful) AS source_address_geo_country_code, " +
-                                "MAX(s.source_address_geo_latitude) FILTER (WHERE n.successful) AS source_address_geo_latitude, " +
-                                "MAX(s.source_address_geo_longitude) FILTER (WHERE n.successful) AS source_address_geo_longitude, " +
-                                "BOOL_OR(s.source_address_is_site_local) FILTER (WHERE n.successful) AS source_address_is_site_local, " +
-                                "BOOL_OR(s.source_address_is_loopback) FILTER (WHERE n.successful) AS source_address_is_loopback, " +
-                                "BOOL_OR(s.source_address_is_multicast) FILTER (WHERE n.successful) AS source_address_is_multicast, " +
-                                "MAX(s.destination_mac) FILTER (WHERE n.successful) AS destination_mac, " +
-                                "MAX(s.destination_address) FILTER (WHERE n.successful) AS destination_address, " +
-                                "MAX(s.destination_port) FILTER (WHERE n.successful) AS destination_port, " +
-                                "MAX(s.destination_address_geo_asn_number) FILTER (WHERE n.successful) AS destination_address_geo_asn_number, " +
-                                "MAX(s.destination_address_geo_asn_name) FILTER (WHERE n.successful) AS destination_address_geo_asn_name, " +
-                                "MAX(s.destination_address_geo_asn_domain) FILTER (WHERE n.successful) AS destination_address_geo_asn_domain, " +
-                                "MAX(s.destination_address_geo_city) FILTER (WHERE n.successful) AS destination_address_geo_city, " +
-                                "MAX(s.destination_address_geo_country_code) FILTER (WHERE n.successful) AS destination_address_geo_country_code, " +
-                                "MAX(s.destination_address_geo_latitude) FILTER (WHERE n.successful) AS destination_address_geo_latitude, " +
-                                "MAX(s.destination_address_geo_longitude) FILTER (WHERE n.successful) AS destination_address_geo_longitude, " +
-                                "BOOL_OR(s.destination_address_is_site_local) FILTER (WHERE n.successful) AS destination_address_is_site_local, " +
-                                "BOOL_OR(s.destination_address_is_loopback) FILTER (WHERE n.successful) AS destination_address_is_loopback, " +
-                                "BOOL_OR(s.destination_address_is_multicast) FILTER (WHERE n.successful) AS destination_address_is_multicast, " +
+                                "COALESCE(MAX(s.source_mac) FILTER (WHERE n.successful), MAX(s.source_mac)) AS source_mac, " +
+                                "COALESCE(MAX(s.source_address) FILTER (WHERE n.successful), MAX(s.source_address)) AS source_address, " +
+                                "COALESCE(MAX(s.source_port) FILTER (WHERE n.successful), MAX(s.source_port)) AS source_port, " +
+                                "COALESCE(MAX(s.source_address_geo_asn_number) FILTER (WHERE n.successful), MAX(s.source_address_geo_asn_number)) AS source_address_geo_asn_number, " +
+                                "COALESCE(MAX(s.source_address_geo_asn_name) FILTER (WHERE n.successful), MAX(s.source_address_geo_asn_name)) AS source_address_geo_asn_name, " +
+                                "COALESCE(MAX(s.source_address_geo_asn_domain) FILTER (WHERE n.successful), MAX(s.source_address_geo_asn_domain)) AS source_address_geo_asn_domain, " +
+                                "COALESCE(MAX(s.source_address_geo_city) FILTER (WHERE n.successful), MAX(s.source_address_geo_city)) AS source_address_geo_city, " +
+                                "COALESCE(MAX(s.source_address_geo_country_code) FILTER (WHERE n.successful), MAX(s.source_address_geo_country_code)) AS source_address_geo_country_code, " +
+                                "COALESCE(MAX(s.source_address_geo_latitude) FILTER (WHERE n.successful), MAX(s.source_address_geo_latitude)) AS source_address_geo_latitude, " +
+                                "COALESCE(MAX(s.source_address_geo_longitude) FILTER (WHERE n.successful), MAX(s.source_address_geo_longitude)) AS source_address_geo_longitude, " +
+                                "COALESCE(BOOL_OR(s.source_address_is_site_local) FILTER (WHERE n.successful), BOOL_OR(s.source_address_is_site_local)) AS source_address_is_site_local, " +
+                                "COALESCE(BOOL_OR(s.source_address_is_loopback) FILTER (WHERE n.successful), BOOL_OR(s.source_address_is_loopback)) AS source_address_is_loopback, " +
+                                "COALESCE(BOOL_OR(s.source_address_is_multicast) FILTER (WHERE n.successful), BOOL_OR(s.source_address_is_multicast)) AS source_address_is_multicast, " +
+                                "COALESCE(MAX(s.destination_mac) FILTER (WHERE n.successful), MAX(s.destination_mac)) AS destination_mac, " +
+                                "COALESCE(MAX(s.destination_address) FILTER (WHERE n.successful), MAX(s.destination_address)) AS destination_address, " +
+                                "COALESCE(MAX(s.destination_port) FILTER (WHERE n.successful), MAX(s.destination_port)) AS destination_port, " +
+                                "COALESCE(MAX(s.destination_address_geo_asn_number) FILTER (WHERE n.successful), MAX(s.destination_address_geo_asn_number)) AS destination_address_geo_asn_number, " +
+                                "COALESCE(MAX(s.destination_address_geo_asn_name) FILTER (WHERE n.successful), MAX(s.destination_address_geo_asn_name)) AS destination_address_geo_asn_name, " +
+                                "COALESCE(MAX(s.destination_address_geo_asn_domain) FILTER (WHERE n.successful), MAX(s.destination_address_geo_asn_domain)) AS destination_address_geo_asn_domain, " +
+                                "COALESCE(MAX(s.destination_address_geo_city) FILTER (WHERE n.successful), MAX(s.destination_address_geo_city)) AS destination_address_geo_city, " +
+                                "COALESCE(MAX(s.destination_address_geo_country_code) FILTER (WHERE n.successful), MAX(s.destination_address_geo_country_code)) AS destination_address_geo_country_code, " +
+                                "COALESCE(MAX(s.destination_address_geo_latitude) FILTER (WHERE n.successful), MAX(s.destination_address_geo_latitude)) AS destination_address_geo_latitude, " +
+                                "COALESCE(MAX(s.destination_address_geo_longitude) FILTER (WHERE n.successful), MAX(s.destination_address_geo_longitude)) AS destination_address_geo_longitude, " +
+                                "COALESCE(BOOL_OR(s.destination_address_is_site_local) FILTER (WHERE n.successful), BOOL_OR(s.destination_address_is_site_local)) AS destination_address_is_site_local, " +
+                                "COALESCE(BOOL_OR(s.destination_address_is_loopback) FILTER (WHERE n.successful), BOOL_OR(s.destination_address_is_loopback)) AS destination_address_is_loopback, " +
+                                "COALESCE(BOOL_OR(s.destination_address_is_multicast) FILTER (WHERE n.successful), BOOL_OR(s.destination_address_is_multicast)) AS destination_address_is_multicast, " +
                                 "COALESCE(jsonb_agg(DISTINCT me.elem) FILTER (WHERE me.elem IS NOT NULL), '[]'::jsonb) AS mapped_addresses, " +
                                 "COALESCE(jsonb_agg(DISTINCT pe.elem) FILTER (WHERE pe.elem IS NOT NULL), '[]'::jsonb) AS peer_addresses, " +
                                 "COALESCE(jsonb_agg(DISTINCT re.elem) FILTER (WHERE re.elem IS NOT NULL), '[]'::jsonb) AS relayed_addresses, " +
@@ -556,7 +556,7 @@ public class NAT {
                         .findOne()
         );
     }
-
+    
     public List<STUNNegotiationEntry> findFlowsOfNegotiation(String negotiationKeySha256, List<UUID> taps) {
         if (taps.isEmpty()) {
             return Collections.emptyList();
