@@ -28,10 +28,7 @@ import com.google.common.collect.Maps;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -42,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import static app.nzyme.core.rest.misc.WebRTCHelper.buildWebRTCSessionDetailsResponse;
 import static app.nzyme.core.util.filters.FilterParser.parseFiltersQueryParameter;
@@ -92,10 +90,43 @@ public class WebRTCResource extends TapDataHandlingResource {
         for (WebRTCSessionEntry session : nzyme.getEthernet().webRtc()
                 .findAllSessions(timeRange, filters, orderColumn, orderDirection, limit, offset, taps)) {
 
-            sessions.add(buildWebRTCSessionDetailsResponse(session, nzyme, organizationId, tenantId));
+            sessions.add(buildWebRTCSessionDetailsResponse(session, null, nzyme, organizationId, tenantId));
         }
 
         return Response.ok(WebRTCSessionsListResponse.create(total, sessions)).build();
+    }
+
+
+    @GET
+    @Path("/sessions/show/{negotiation_key_sha256}")
+    public Response oneSession(@Context SecurityContext sc,
+                               @PathParam("negotiation_key_sha256") String negotiationKeySha256,
+                               @QueryParam("organization_id") UUID organizationId,
+                               @QueryParam("tenant_id") UUID tenantId,
+                               @QueryParam("taps") String tapIds) {
+        List<UUID> taps = parseAndValidateTapIds(getAuthenticatedUser(sc), nzyme, tapIds);
+
+        if (!passedTenantDataAccessible(sc, organizationId, tenantId)) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        Optional<WebRTCSessionEntry> session = nzyme.getEthernet().webRtc().findOneSession(negotiationKeySha256, taps);
+
+        if (session.isEmpty()) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        List<WebRTCSessionDetailsResponse> subSessions = nzyme.getEthernet()
+                .webRtc()
+                .findSubSessionsOfSession(session.get().negotiationKeySha256(), taps)
+                .stream()
+                .map(webRTCSessionEntry ->
+                        buildWebRTCSessionDetailsResponse(webRTCSessionEntry, null, nzyme, organizationId, tenantId)
+                ).toList();
+
+        return Response.ok(
+                buildWebRTCSessionDetailsResponse(session.get(), subSessions, nzyme, organizationId, tenantId)
+        ).build();
     }
 
     @GET

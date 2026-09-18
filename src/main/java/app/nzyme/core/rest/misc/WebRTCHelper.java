@@ -9,6 +9,7 @@ import app.nzyme.core.rest.responses.ethernet.L4AddressResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCRTPStreamDetailsResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCSessionDetailsResponse;
 import com.google.common.collect.Lists;
+import jakarta.annotation.Nullable;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
@@ -20,6 +21,7 @@ public class WebRTCHelper {
     private static final ObjectMapper OM = new ObjectMapper();
 
     public static WebRTCSessionDetailsResponse buildWebRTCSessionDetailsResponse(WebRTCSessionEntry session,
+                                                                                 @Nullable List<WebRTCSessionDetailsResponse> subSessions,
                                                                                  NzymeNode nzyme,
                                                                                  UUID organizationId,
                                                                                  UUID tenantId) {
@@ -81,6 +83,7 @@ public class WebRTCHelper {
                 source,
                 destination,
                 rtpStreams,
+                subSessions,
                 session.durationMs(),
                 session.firstSeen(),
                 session.lastActivity()

@@ -10,6 +10,7 @@ import moment from "moment";
 import numeral from "numeral";
 import {formatDurationMs} from "../../../../util/Tools";
 import FullCopy from "../../../shared/FullCopy";
+import ApiRoutes from "../../../../util/ApiRoutes";
 
 export default function WebRTCSessionsTableRow({session, setFilters}) {
 
@@ -40,7 +41,7 @@ export default function WebRTCSessionsTableRow({session, setFilters}) {
         <WebRTCSessionActiveIndicator session={session} />
       </td>
       <td>
-        <a href="">
+        <a href={ApiRoutes.ETHERNET.STREAMS.WEBRTC.DETAILS(session.negotiation_key_sha256)}>
           <FullCopyShortenedId value={session.negotiation_key_sha256} />
         </a>
       </td>

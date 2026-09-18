@@ -556,7 +556,7 @@ public class NAT {
                         .findOne()
         );
     }
-    
+
     public List<STUNNegotiationEntry> findFlowsOfNegotiation(String negotiationKeySha256, List<UUID> taps) {
         if (taps.isEmpty()) {
             return Collections.emptyList();

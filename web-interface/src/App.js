@@ -188,6 +188,7 @@ import PortalIntegrityReportDetailsPage from "./components/ethernet/portalintegr
 import RTSPStreamDetailsPage from "./components/ethernet/streams/rtsp/RTSPStreamDetailsPage";
 import BluetoothMonitorsPage from "./components/bluetooth/monitoring/BluetoothMonitorsPage";
 import WebRTCSessionsPage from "./components/ethernet/streams/webrtc/WebRTCSessionsPage";
+import WebRTCSessionDetailsPage from "./components/ethernet/streams/webrtc/WebRTCSessionDetailsPage";
 
 const pingService = new PingService();
 const authenticationService = new AuthenticationService();
@@ -589,8 +590,9 @@ function App() {
 
                                 { /* Ethernet/Streams. */}
                                 <Route path={ApiRoutes.ETHERNET.STREAMS.WEBRTC.INDEX} element={<WebRTCSessionsPage />}/>
+                                <Route path={ApiRoutes.ETHERNET.STREAMS.WEBRTC.DETAILS(':negotiationKey')} element={<WebRTCSessionDetailsPage />}/>
                                 <Route path={ApiRoutes.ETHERNET.STREAMS.RTSP.INDEX} element={<RTSPStreamsPage />}/>
-                                <Route path={ApiRoutes.ETHERNET.STREAMS.RTSP.DETAILS(':sessionId')} element={<RTSPStreamDetailsPage />}/>
+                                <Route path={ApiRoutes.ETHERNET.STREAMS.RTSP.DETAILS(':negotiationKey')} element={<RTSPStreamDetailsPage />}/>
 
                                 { /* Ethernet/Time. */}
                                 <Route path={ApiRoutes.ETHERNET.TIME.NTP.INDEX} element={<NTPOverviewPage />}/>

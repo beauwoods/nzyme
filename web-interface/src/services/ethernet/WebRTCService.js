@@ -10,6 +10,14 @@ export default class WebRTCService {
     )
   }
 
+  findOneSessions(negotiationKeySha256, organizationId, tenantId, taps, setSession) {
+    const tapsList = Array.isArray(taps) ? taps.join(",") : (taps === "*" ? "*" : null)
+
+    RESTClient.get(`/ethernet/webrtc/sessions/show/${negotiationKeySha256}`, { organization_id: organizationId, tenant_id: tenantId, taps: tapsList },
+      (response) => setSession(response.data)
+    )
+  }
+
   getActiveSessionCountHistogram(setHistogram, timeRange, filters, taps) {
     const tapsList = Array.isArray(taps) ? taps.join(",") : (taps === "*" ? "*" : null)
 

@@ -125,7 +125,7 @@ public class WebRTC {
         );
     }
 
-    public List<WebRTCSessionEntry> findConversationsOfSession(String negotiationKeySha256, List<UUID> taps) {
+    public List<WebRTCSessionEntry> findSubSessionsOfSession(String negotiationKeySha256, List<UUID> taps) {
         if (taps.isEmpty()) {
             return Collections.emptyList();
         }
@@ -138,6 +138,7 @@ public class WebRTC {
                                 "w.rtp_streams, w.dtls_app_data_records, " +
                                 "w.first_seen, w.last_activity, " +
                                 "(w.last_activity >= NOW() - INTERVAL '60 seconds') AS is_active, " +
+                                "(EXTRACT(EPOCH FROM (w.last_activity - w.first_seen)) * 1000)::bigint AS duration_ms, " +
                                 "s.bytes_rx_count + s.bytes_tx_count AS bytes_exchanged, " +
                                 "s.source_mac, s.source_address, s.source_port, " +
                                 "s.source_address_geo_asn_number, s.source_address_geo_asn_name, " +

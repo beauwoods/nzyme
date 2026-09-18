@@ -405,7 +405,7 @@ public class NATResource extends TapDataHandlingResource {
         if (webRtcSession.isPresent()) {
             relatedConnections.put(
                     "webrtc",
-                    buildWebRTCSessionDetailsResponse(webRtcSession.get(), nzyme, organizationId, tenantId)
+                    buildWebRTCSessionDetailsResponse(webRtcSession.get(), null, nzyme, organizationId, tenantId)
             );
         }
 

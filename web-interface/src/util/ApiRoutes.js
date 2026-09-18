@@ -186,10 +186,11 @@ const ApiRoutes = {
     STREAMS: {
       RTSP: {
         INDEX: '/ethernet/streams/rtsp',
-        DETAILS: (sessionId) => `/ethernet/streams/rtsp/show/${sessionId}`
+        DETAILS: (negotiationKey) => `/ethernet/streams/rtsp/show/${negotiationKey}`
       },
       WEBRTC: {
         INDEX: '/ethernet/streams/webrtc',
+        DETAILS: (negotiationKey) => `/ethernet/streams/webrtc/show/${negotiationKey}`
       }
     },
     TIME: {

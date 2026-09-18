@@ -40,6 +40,8 @@ public abstract class WebRTCSessionDetailsResponse {
     public abstract L4AddressResponse destination();
     @JsonProperty("rtp_streams")
     public abstract List<WebRTCRTPStreamDetailsResponse> rtpStreams();
+    @Nullable @JsonProperty("sub_sessions")
+    public abstract List<WebRTCSessionDetailsResponse> subSessions();
     @JsonProperty("duration_ms")
     public abstract long durationMs();
     @JsonProperty("first_seen")
@@ -47,7 +49,7 @@ public abstract class WebRTCSessionDetailsResponse {
     @JsonProperty("last_activity")
     public abstract DateTime lastActivity();
 
-    public static WebRTCSessionDetailsResponse create(String negotiationKey, String negotiationKeySha256, String transport, boolean isActive, boolean hasRtp, boolean hasDtls, boolean hasAudio, boolean hasVideo, long streamCount, long dtlsAppDataRecords, Long bytesExchanged, L4AddressResponse source, L4AddressResponse destination, List<WebRTCRTPStreamDetailsResponse> rtpStreams, long durationMs, DateTime firstSeen, DateTime lastActivity) {
+    public static WebRTCSessionDetailsResponse create(String negotiationKey, String negotiationKeySha256, String transport, boolean isActive, boolean hasRtp, boolean hasDtls, boolean hasAudio, boolean hasVideo, long streamCount, long dtlsAppDataRecords, Long bytesExchanged, L4AddressResponse source, L4AddressResponse destination, List<WebRTCRTPStreamDetailsResponse> rtpStreams, List<WebRTCSessionDetailsResponse> subSessions, long durationMs, DateTime firstSeen, DateTime lastActivity) {
         return builder()
                 .negotiationKey(negotiationKey)
                 .negotiationKeySha256(negotiationKeySha256)
@@ -63,6 +65,7 @@ public abstract class WebRTCSessionDetailsResponse {
                 .source(source)
                 .destination(destination)
                 .rtpStreams(rtpStreams)
+                .subSessions(subSessions)
                 .durationMs(durationMs)
                 .firstSeen(firstSeen)
                 .lastActivity(lastActivity)
@@ -102,6 +105,8 @@ public abstract class WebRTCSessionDetailsResponse {
         public abstract Builder destination(L4AddressResponse destination);
 
         public abstract Builder rtpStreams(List<WebRTCRTPStreamDetailsResponse> rtpStreams);
+
+        public abstract Builder subSessions(List<WebRTCSessionDetailsResponse> subSessions);
 
         public abstract Builder durationMs(long durationMs);
 
