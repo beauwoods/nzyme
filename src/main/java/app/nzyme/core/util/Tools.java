@@ -113,12 +113,15 @@ public class Tools {
                                     String destinationAddress,
                                     int sourcePort,
                                     int destinationPort) {
+        String[] ordered = canonicalEndpoints(sourceAddress, destinationAddress, sourcePort, destinationPort);
+
         return Hashing.sha256()
                 .hashString(sessionEstablishedAt.getMillis()
-                        + sourceAddress
-                        + destinationAddress
-                        + sourcePort
-                        + destinationPort, Charsets.UTF_8)
+                                + ordered[0]   // low address
+                                + ordered[1]   // high address
+                                + ordered[2]   // low port
+                                + ordered[3]   // high port
+                        , Charsets.UTF_8)
                 .toString();
     }
 
@@ -126,9 +129,39 @@ public class Tools {
                                            String destinationAddress,
                                            int sourcePort,
                                            int destinationPort) {
+        String[] ordered = canonicalEndpoints(sourceAddress, destinationAddress, sourcePort, destinationPort);
+
         return Hashing.sha256()
-                .hashString(sourceAddress + destinationAddress + sourcePort + destinationPort, Charsets.UTF_8)
+                .hashString(ordered[0] + ordered[1] + ordered[2] + ordered[3], Charsets.UTF_8)
                 .toString();
+    }
+
+    private static String[] canonicalEndpoints(String sourceAddress,
+                                               String destinationAddress,
+                                               int sourcePort,
+                                               int destinationPort) {
+        boolean sourceIsLow;
+        int addrCmp = sourceAddress.compareTo(destinationAddress);
+        if (addrCmp < 0) {
+            sourceIsLow = true;
+        } else if (addrCmp > 0) {
+            sourceIsLow = false;
+        } else {
+            // Same address; order by port.
+            sourceIsLow = sourcePort <= destinationPort;
+        }
+
+        if (sourceIsLow) {
+            return new String[]{
+                    sourceAddress, destinationAddress,
+                    String.valueOf(sourcePort), String.valueOf(destinationPort)
+            };
+        } else {
+            return new String[]{
+                    destinationAddress, sourceAddress,
+                    String.valueOf(destinationPort), String.valueOf(sourcePort)
+            };
+        }
     }
 
     public static InetAddress stringtoInetAddress(String address) {
