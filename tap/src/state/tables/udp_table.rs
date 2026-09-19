@@ -11,11 +11,18 @@ use crate::link::reports::udp_conversations_report;
 use crate::messagebus::bus::Bus;
 use crate::metrics::Metrics;
 use crate::protocols::detection::l7_tagger::{tag_udp_sessions, L7Tag};
+use crate::protocols::detection::taggers::tagger_command::TaggerCommand;
 use crate::protocols::parsers::l4_key::L4Key;
+use crate::protocols::tools::ip_tools::is_site_local;
 use crate::wired::traffic_direction::TrafficDirection;
 
 const MAX_BYTES_PER_DIRECTION: usize = 256;
 const RECENT_RING_MAX_DATAGRAMS: usize = 64;
+
+// Byte-heaviness orientation thresholds for WebRTC/media flows.
+const ORIENT_BY_BYTES_MIN_TOTAL: u64 = 50_000;
+// The heavier direction must be at least this fraction of total to decide.
+const ORIENT_BY_BYTES_MAJORITY: f64 = 0.70;
 
 pub struct UdpTable {
     leaderlink: Arc<Mutex<Leaderlink>>,
@@ -200,7 +207,8 @@ impl UdpTable {
                     }
                 }
 
-                // Scan session payloads and tag.
+                // Scan session payloads and tag. (Sets STUN/RTP/etc tags and applies
+                // the STUN tagger's own OrientClientTo.)
                 let mut timer = Timer::new();
                 tag_udp_sessions(&mut conversations, self.ethernet_bus.clone(), self.metrics.clone());
                 timer.stop();
@@ -209,6 +217,11 @@ impl UdpTable {
                     "tables.tcp.timer.sessions.tagging",
                     &self.metrics
                 );
+
+                // Further orientation where possible.
+                for c in conversations.values_mut() {
+                    orient_webrtc(c);
+                }
 
                 // Generate JSON.
                 let mut timer = Timer::new();
@@ -298,5 +311,64 @@ fn push_recent(q: &mut VecDeque<Vec<u8>>, payload: Vec<u8>) {
     q.push_back(payload);
     while q.len() > RECENT_RING_MAX_DATAGRAMS {
         q.pop_front();
+    }
+}
+
+// Orient a WebRTC/media conversation so the meaningful endpoint is the source.
+fn orient_webrtc(c: &mut UdpConversation) {
+    // Only apply to WebRTC/media flows.
+    if !c.tags.contains(&L7Tag::STUN) {
+        return;
+    }
+
+    let total = c.bytes_count_tx + c.bytes_count_rx;
+
+    // Level 1: Decisive byte imbalance. Heavy sender is source.
+    if total >= ORIENT_BY_BYTES_MIN_TOTAL {
+        // Bytes the current destination sent.
+        let dest_sent = c.bytes_count_rx;
+        // Bytes the current source sent.
+        let src_sent = c.bytes_count_tx;
+        let threshold = (total as f64) * ORIENT_BY_BYTES_MAJORITY;
+
+        if (dest_sent as f64) >= threshold {
+            // Destination is the heavy sender. Make it the source.
+            TaggerCommand::OrientClientTo {
+                address: c.destination_address,
+                port: c.destination_port,
+            }.apply(c);
+            return;
+        }
+        if (src_sent as f64) >= threshold {
+            // Source is already the heavy sender.
+            return;
+        }
+
+        // Balanced despite volume. Fall through to heuristics.
+    }
+
+    // Level 2: site-local as source (internal asset) when there is a clear split.
+    let src_local = is_site_local(c.source_address);
+    let dst_local = is_site_local(c.destination_address);
+    match (src_local, dst_local) {
+        (true, false) => return, // Source is already the internal side.
+        (false, true) => {
+            TaggerCommand::OrientClientTo {
+                address: c.destination_address,
+                port: c.destination_port,
+            }.apply(c);
+            return;
+        }
+        _ => {} // Both or neither site-local. Fall through to Level 3
+    }
+
+    // Level 3: Canonical (lower endpoint as source)
+    let src = (c.source_address, c.source_port);
+    let dst = (c.destination_address, c.destination_port);
+    if dst < src {
+        TaggerCommand::OrientClientTo {
+            address: c.destination_address,
+            port: c.destination_port,
+        }.apply(c);
     }
 }
