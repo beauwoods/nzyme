@@ -6,6 +6,7 @@ import app.nzyme.core.ethernet.webrtc.db.WebRTCRTPStreamData;
 import app.nzyme.core.ethernet.webrtc.db.WebRTCSessionEntry;
 import app.nzyme.core.rest.RestHelpers;
 import app.nzyme.core.rest.responses.ethernet.L4AddressResponse;
+import app.nzyme.core.rest.responses.ethernet.nat.NATSTUNNegotiationDetailsResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCRTPStreamDetailsResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCSessionDetailsResponse;
 import com.google.common.collect.Lists;
@@ -22,6 +23,7 @@ public class WebRTCHelper {
 
     public static WebRTCSessionDetailsResponse buildWebRTCSessionDetailsResponse(WebRTCSessionEntry session,
                                                                                  @Nullable List<WebRTCSessionDetailsResponse> subSessions,
+                                                                                 @Nullable NATSTUNNegotiationDetailsResponse stunNegotiation,
                                                                                  NzymeNode nzyme,
                                                                                  UUID organizationId,
                                                                                  UUID tenantId) {
@@ -84,6 +86,7 @@ public class WebRTCHelper {
                 destination,
                 rtpStreams,
                 subSessions,
+                stunNegotiation,
                 session.durationMs(),
                 session.firstSeen(),
                 session.lastActivity()

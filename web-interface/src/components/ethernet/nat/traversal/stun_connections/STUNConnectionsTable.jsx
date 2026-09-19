@@ -17,6 +17,8 @@ import ApiRoutes from "../../../../../util/ApiRoutes";
 import STUNConnectionActiveIndicator from "./STUNConnectionActiveIndicator";
 import STUNConnectionSuccessIndicator from "./STUNConnectionSuccessIndicator";
 import STUNConnectionL4Tags from "./STUNConnectionL4Tags";
+import STUNConnectionsTableHead from "./STUNConnectionsTableHead";
+import STUNConnectionsTableRow from "./STUNConnectionsTableRow";
 
 const natService = new NATService();
 
@@ -48,17 +50,6 @@ export default function STUNConnectionsTable({timeRange, filters, setFilters, re
                           setOrderDirection={setOrderDirection} />
   }
 
-  const macFilter = (address, fieldName) => {
-    if (!address) {
-      return null;
-    }
-
-    return <FilterValueIcon setFilters={setFilters}
-                            fields={STUN_CONNECTIONS_FILTER_FIELDS}
-                            field={fieldName}
-                            value={address.address} />
-  }
-
   if (!data) {
     return <GenericWidgetLoadingSpinner height={150} />
   }
@@ -73,89 +64,11 @@ export default function STUNConnectionsTable({timeRange, filters, setFilters, re
 
       <table className="table table-sm table-hover table-striped mb-4 mt-3">
         <thead>
-        <tr>
-          <th>{columnSorting("successful")}</th>
-          <th>ID</th>
-          <th>Source MAC {columnSorting("source_mac")}</th>
-          <th>Source Address {columnSorting("source_address")}</th>
-          <th>Destination MAC {columnSorting("destination_mac")}</th>
-          <th>Destination Address {columnSorting("destination_address")}</th>
-          <th>TURN {columnSorting("is_turn")}</th>
-          <th>Tags</th>
-          <th title="Mapped Addresses" className="hide-narrow">M</th>
-          <th title="Peer Addresses" className="hide-narrow">P</th>
-          <th title="Relayed Addresses" className="hide-narrow">R</th>
-          <th>Bytes {columnSorting("bytes")}</th>
-          <th>Initiated At {columnSorting("initiated_at")}</th>
-          <th>Last Activity {columnSorting("last_activity")}</th>
-          <th>A {columnSorting("is_active")}</th>
-        </tr>
+          <STUNConnectionsTableHead columnSorting={columnSorting} />
         </thead>
         <tbody>
         {data.negotiations.map((n, i) => {
-          return (
-            <tr key={i}>
-              <td><STUNConnectionSuccessIndicator successful={n.successful} /></td>
-              <td>
-                <a href={ApiRoutes.ETHERNET.NAT.TRAVERSAL.STUN_CONNECTIONS.DETAILS(n.negotiation_key_sha256)}>
-                  <FullCopyShortenedId value={n.negotiation_key_sha256} />
-                </a>
-              </td>
-              <td>
-                <InternalAddressOnlyWrapper
-                  address={n.source}
-                  inner={n.source ? <EthernetMacAddress addressWithContext={n.source.mac}
-                                                        filterElement={macFilter(n.source.mac, "source_mac")}
-                                                        withAssetLink withAssetName /> : null} />
-              </td>
-              <td>
-                <L4Address address={n.source}
-                           hidePort={true}
-                           filterElement={n.source ? <FilterValueIcon setFilters={setFilters}
-                                                                      fields={STUN_CONNECTIONS_FILTER_FIELDS}
-                                                                      field="source_address"
-                                                                      value={n.source.address} /> : null } />
-              </td>
-              <td>
-                <InternalAddressOnlyWrapper
-                  address={n.destination}
-                  inner={n.destination ? <EthernetMacAddress addressWithContext={n.destination.mac}
-                                                        filterElement={macFilter(n.destination.mac, "destination_mac")}
-                                                        withAssetLink withAssetName /> : null} />
-              </td>
-              <td>
-                <L4Address address={n.destination}
-                           hidePort={true}
-                           filterElement={n.destination ? <FilterValueIcon setFilters={setFilters}
-                                                                           fields={STUN_CONNECTIONS_FILTER_FIELDS}
-                                                                           field="destination_address"
-                                                                           value={n.destination.address} /> : null } />
-              </td>
-              <td>{n.is_turn ? "True" : "False"}</td>
-              <td><STUNConnectionL4Tags tags={n.l4_tags} setFilters={setFilters} /></td>
-              <td className="hide-narrow">{numeral(n.mapped_addresses.length).format("0,0")}</td>
-              <td className="hide-narrow">{numeral(n.peer_addresses.length).format("0,0")}</td>
-              <td className="hide-narrow">{numeral(n.relayed_addresses.length).format("0,0")}</td>
-              <td>{n.bytes_exchanged === null ? <span className="text-muted">n/a</span> :
-                (
-                  <>
-                    {numeral(n.bytes_exchanged).format("0b")}
-                    <FilterValueIcon setFilters={setFilters}
-                                     fields={STUN_CONNECTIONS_FILTER_FIELDS}
-                                     field="bytes_exchanged"
-                                     value={n.bytes_exchanged} />
-                  </>
-                )}
-              </td>
-              <td title={moment(n.first_seen).fromNow()}>
-                {moment(n.first_seen).format()}
-              </td>
-              <td title={moment(n.last_activity).format()}>
-                {moment(n.last_activity).fromNow()}
-              </td>
-              <td><STUNConnectionActiveIndicator active={n.is_active} /></td>
-            </tr>
-          )
+          return <STUNConnectionsTableRow key={i} connection={n} setFilters={setFilters} />
         })}
         </tbody>
       </table>

@@ -8,12 +8,15 @@ import app.nzyme.core.database.generic.AddressPairNumberAggregationResult;
 import app.nzyme.core.database.generic.AssetPairNumberAggregationResult;
 import app.nzyme.core.database.generic.ThreeColumnHistogramOrderColumn;
 import app.nzyme.core.ethernet.L4Type;
+import app.nzyme.core.ethernet.nat.db.STUNNegotiationEntry;
 import app.nzyme.core.ethernet.webrtc.WebRTC;
 import app.nzyme.core.ethernet.webrtc.db.WebRTCSessionEntry;
 import app.nzyme.core.rest.RestHelpers;
 import app.nzyme.core.rest.TapDataHandlingResource;
+import app.nzyme.core.rest.misc.NATHelper;
 import app.nzyme.core.rest.responses.ethernet.EthernetMacAddressContextResponse;
 import app.nzyme.core.rest.responses.ethernet.EthernetMacAddressResponse;
+import app.nzyme.core.rest.responses.ethernet.nat.NATSTUNNegotiationDetailsResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCSessionDetailsResponse;
 import app.nzyme.core.rest.responses.ethernet.webrtc.WebRTCSessionsListResponse;
 import app.nzyme.core.rest.responses.shared.*;
@@ -35,10 +38,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import org.joda.time.DateTime;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 
 import static app.nzyme.core.rest.misc.WebRTCHelper.buildWebRTCSessionDetailsResponse;
@@ -90,7 +90,7 @@ public class WebRTCResource extends TapDataHandlingResource {
         for (WebRTCSessionEntry session : nzyme.getEthernet().webRtc()
                 .findAllSessions(timeRange, filters, orderColumn, orderDirection, limit, offset, taps)) {
 
-            sessions.add(buildWebRTCSessionDetailsResponse(session, null, nzyme, organizationId, tenantId));
+            sessions.add(buildWebRTCSessionDetailsResponse(session, null, null, nzyme, organizationId, tenantId));
         }
 
         return Response.ok(WebRTCSessionsListResponse.create(total, sessions)).build();
@@ -121,12 +121,23 @@ public class WebRTCResource extends TapDataHandlingResource {
                 .findSubSessionsOfSession(session.get().negotiationKeySha256(), taps)
                 .stream()
                 .map(webRTCSessionEntry ->
-                        buildWebRTCSessionDetailsResponse(webRTCSessionEntry, null, nzyme, organizationId, tenantId)
+                        buildWebRTCSessionDetailsResponse(webRTCSessionEntry, null, null, nzyme, organizationId, tenantId)
                 ).toList();
 
-        return Response.ok(
-                buildWebRTCSessionDetailsResponse(session.get(), subSessions, nzyme, organizationId, tenantId)
-        ).build();
+        // Add a STUN negotiation if there is one.
+        Optional<STUNNegotiationEntry> stun = nzyme.getEthernet().nat()
+                .findOneNegotiation(session.get().negotiationKeySha256(), taps);
+
+        NATSTUNNegotiationDetailsResponse stunResponse = null;
+        if (stun.isPresent()) {
+            stunResponse = NATHelper.buildNegotiationDetailsResponse(
+                    stun.get(), Collections.emptyList(), null, nzyme, organizationId, tenantId
+            );
+        }
+
+        return Response.ok(buildWebRTCSessionDetailsResponse(
+                session.get(), subSessions, stunResponse, nzyme, organizationId, tenantId
+        )).build();
     }
 
     @GET

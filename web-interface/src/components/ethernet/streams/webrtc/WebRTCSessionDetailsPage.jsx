@@ -16,6 +16,11 @@ import InternalAddressOnlyWrapper from "../../shared/InternalAddressOnlyWrapper"
 import EthernetMacAddress from "../../../shared/context/macs/EthernetMacAddress";
 import L4SessionTags from "../../l4/L4SessionTags";
 import moment from "moment/moment";
+import WebRTCSessionsTable from "./WebRTCSessionsTable";
+import WebRTCSessionsTableHead from "./WebRTCSessionsTableHead";
+import WebRTCSessionsTableRow from "./WebRTCSessionsTableRow";
+import STUNConnectionsTableHead from "../../nat/traversal/stun_connections/STUNConnectionsTableHead";
+import STUNConnectionsTableRow from "../../nat/traversal/stun_connections/STUNConnectionsTableRow";
 
 const webRTCService = new WebRTCService();
 
@@ -58,6 +63,71 @@ export default function WebRTCSessionDetailsPage() {
     if (session.has_video) { contentTypes.push("Video"); }
 
     return contentTypes.join(", ")
+  }
+
+  const subSessions = () => {
+    if (!session.sub_sessions || session.sub_sessions.length <= 1) {
+      return <div className="alert alert-info mb-0">This session consists of a single network flow, shown above.</div>
+    }
+
+    return (
+      <table className="table table-sm table-striped">
+        <thead>
+        <WebRTCSessionsTableHead />
+        </thead>
+        <tbody>
+        {session.sub_sessions.map((session, i) => {
+          return <WebRTCSessionsTableRow key={i} session={session} setFilters={null} />
+        })}
+        </tbody>
+      </table>
+    )
+  }
+
+  const rtpStreams = () => {
+    if (!session.rtp_streams || session.rtp_streams === 0) {
+      return <div className="alert alert-info mb-0">This session did not contain RTP streams.</div>
+    }
+
+    return (
+      <table className="table table-sm table-striped table-hover">
+        <thead>
+        <tr>
+          <th>SSRC</th>
+          <th>Media Type</th>
+          <th>Packets</th>
+        </tr>
+        </thead>
+        <tbody>
+        {session.rtp_streams.map((stream, i) => {
+          return (
+            <tr key={i}>
+              <td><span className="machine-data">{stream.ssrc}</span></td>
+              <td>{stream.media_kind}</td>
+              <td>{numeral(stream.packet_count).format("0,0")}</td>
+            </tr>
+          )
+        })}
+        </tbody>
+      </table>
+    )
+  }
+
+  const stunNegotiation = () => {
+    if (!session.stun_negotiation) {
+      return <div className="alert alert-info mb-0">The related STUN negotiation could not be found.</div>
+    }
+
+    return (
+      <table className="table table-sm table-striped">
+        <thead>
+        <STUNConnectionsTableHead />
+        </thead>
+        <tbody>
+          <STUNConnectionsTableRow connection={session.stun_negotiation} setFilters={null} />
+        </tbody>
+      </table>
+    )
   }
 
   if (session == null) {
@@ -177,6 +247,50 @@ export default function WebRTCSessionDetailsPage() {
           </div>
         </div>
       </div>
+
+      <div className="row mt-3">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-body">
+              <CardTitleWithControls title="Sub-Sessions" />
+
+              <p className="text-muted">
+                A WebRTC session can span multiple underlying network flows. For example,
+                separate flows for control, audio or video. Nzyme groups all flows that share the
+                same STUN negotiation into a single session on the overview page, and breaks that
+                session down into its individual sub-sessions here.
+              </p>
+
+              {subSessions()}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mt-3">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-body">
+              <CardTitleWithControls title="Related STUN Negotiation" />
+
+              {stunNegotiation()}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row mt-3">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-body">
+              <CardTitleWithControls title="RTP Streams" />
+
+              {rtpStreams()}
+            </div>
+          </div>
+        </div>
+      </div>
+
     </React.Fragment>
   )
 

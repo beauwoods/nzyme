@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static app.nzyme.core.rest.misc.NATHelper.buildNegotiationDetailsResponse;
 import static app.nzyme.core.rest.misc.WebRTCHelper.buildWebRTCSessionDetailsResponse;
 import static app.nzyme.core.util.filters.FilterParser.parseFiltersQueryParameter;
 
@@ -364,7 +365,7 @@ public class NATResource extends TapDataHandlingResource {
         List<NATSTUNNegotiationDetailsResponse> negotiations = Lists.newArrayList();
         for (STUNNegotiationEntry negotiation : nzyme.getEthernet().nat()
                 .findAllNegotiations(timeRange, filters, orderColumn, orderDirection, limit, offset, taps)) {
-            negotiations.add(buildNegotiationDetailsResponse(negotiation, null, null, organizationId, tenantId));
+            negotiations.add(buildNegotiationDetailsResponse(negotiation, null, null, nzyme, organizationId, tenantId));
         }
 
         return Response.ok(NATSTUNNegotiationsListResponse.create(total, negotiations)).build();
@@ -391,7 +392,7 @@ public class NATResource extends TapDataHandlingResource {
 
         List<NATSTUNNegotiationDetailsResponse> flows = Lists.newArrayList();
         for (STUNNegotiationEntry flow : nzyme.getEthernet().nat().findFlowsOfNegotiation(negotiation.get().negotiationKeySha256(), taps)) {
-            flows.add(buildNegotiationDetailsResponse(flow, null, null, organizationId, tenantId));
+            flows.add(buildNegotiationDetailsResponse(flow, null, null, nzyme, organizationId, tenantId));
         }
 
         // Find related connections if there are any.
@@ -405,87 +406,11 @@ public class NATResource extends TapDataHandlingResource {
         if (webRtcSession.isPresent()) {
             relatedConnections.put(
                     "webrtc",
-                    buildWebRTCSessionDetailsResponse(webRtcSession.get(), null, nzyme, organizationId, tenantId)
+                    buildWebRTCSessionDetailsResponse(webRtcSession.get(), null, null, nzyme, organizationId, tenantId)
             );
         }
 
-        return Response.ok(buildNegotiationDetailsResponse(negotiation.get(), flows, relatedConnections, organizationId, tenantId)).build();
-    }
-
-    private NATSTUNNegotiationDetailsResponse buildNegotiationDetailsResponse(STUNNegotiationEntry negotiation,
-                                                                              List<NATSTUNNegotiationDetailsResponse> flows,
-                                                                              @Nullable Map<String, Object> relatedConnections,
-                                                                              UUID organizationId,
-                                                                              UUID tenantId) {
-        L4AddressResponse source = null;
-        if (negotiation.source() != null) {
-            source = RestHelpers.L4AddressDataToResponse(
-                    nzyme,
-                    organizationId,
-                    tenantId,
-                    L4Type.valueOf(negotiation.transport().toUpperCase()),
-                    negotiation.source()
-            );
-        }
-
-        L4AddressResponse destination = null;
-        if (negotiation.destination() != null) {
-            destination = RestHelpers.L4AddressDataToResponse(
-                    nzyme,
-                    organizationId,
-                    tenantId,
-                    L4Type.valueOf(negotiation.transport().toUpperCase()),
-                    negotiation.destination()
-            );
-        }
-
-        List<L4AddressResponse> mappedAddresses = negotiation.mappedAddresses()
-                .stream()
-                .map(ma -> RestHelpers.L4AddressDataToResponse(
-                        nzyme,
-                        organizationId,
-                        tenantId,
-                        L4Type.valueOf(negotiation.transport().toUpperCase()), ma))
-                .toList();
-
-        List<L4AddressResponse> peerAddresses = negotiation.peerAddresses()
-                .stream()
-                .map(ma -> RestHelpers.L4AddressDataToResponse(
-                        nzyme,
-                        organizationId,
-                        tenantId,
-                        L4Type.valueOf(negotiation.transport().toUpperCase()), ma))
-                .toList();
-
-
-        List<L4AddressResponse> relayedAddresses = negotiation.relayedAddresses()
-                .stream()
-                .map(ma -> RestHelpers.L4AddressDataToResponse(
-                        nzyme,
-                        organizationId,
-                        tenantId,
-                        L4Type.valueOf(negotiation.transport().toUpperCase()), ma))
-                .toList();
-
-        return NATSTUNNegotiationDetailsResponse.create(
-                negotiation.negotiationKey(),
-                negotiation.negotiationKeySha256(),
-                negotiation.isActive(),
-                negotiation.transport(),
-                negotiation.successful(),
-                negotiation.isTurn(),
-                negotiation.bytesExchanged(),
-                source,
-                destination,
-                mappedAddresses,
-                peerAddresses,
-                relayedAddresses,
-                flows,
-                negotiation.l4Tags(),
-                relatedConnections,
-                negotiation.firstSeen(),
-                negotiation.lastActivity()
-        );
+        return Response.ok(buildNegotiationDetailsResponse(negotiation.get(), flows, relatedConnections, nzyme, organizationId, tenantId)).build();
     }
 
     private NATTraversalDiscoveryDetailsResponse buildDiscoveryDetailsResponse(NATTraversalDiscoveryEntry discovery,

@@ -1,6 +1,7 @@
 package app.nzyme.core.rest.responses.ethernet.webrtc;
 
 import app.nzyme.core.rest.responses.ethernet.L4AddressResponse;
+import app.nzyme.core.rest.responses.ethernet.nat.NATSTUNNegotiationDetailsResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.auto.value.AutoValue;
 import jakarta.annotation.Nullable;
@@ -42,6 +43,8 @@ public abstract class WebRTCSessionDetailsResponse {
     public abstract List<WebRTCRTPStreamDetailsResponse> rtpStreams();
     @Nullable @JsonProperty("sub_sessions")
     public abstract List<WebRTCSessionDetailsResponse> subSessions();
+    @Nullable @JsonProperty("stun_negotiation")
+    public abstract NATSTUNNegotiationDetailsResponse stunNegotiation();
     @JsonProperty("duration_ms")
     public abstract long durationMs();
     @JsonProperty("first_seen")
@@ -49,7 +52,7 @@ public abstract class WebRTCSessionDetailsResponse {
     @JsonProperty("last_activity")
     public abstract DateTime lastActivity();
 
-    public static WebRTCSessionDetailsResponse create(String negotiationKey, String negotiationKeySha256, String transport, boolean isActive, boolean hasRtp, boolean hasDtls, boolean hasAudio, boolean hasVideo, long streamCount, long dtlsAppDataRecords, Long bytesExchanged, L4AddressResponse source, L4AddressResponse destination, List<WebRTCRTPStreamDetailsResponse> rtpStreams, List<WebRTCSessionDetailsResponse> subSessions, long durationMs, DateTime firstSeen, DateTime lastActivity) {
+    public static WebRTCSessionDetailsResponse create(String negotiationKey, String negotiationKeySha256, String transport, boolean isActive, boolean hasRtp, boolean hasDtls, boolean hasAudio, boolean hasVideo, long streamCount, long dtlsAppDataRecords, Long bytesExchanged, L4AddressResponse source, L4AddressResponse destination, List<WebRTCRTPStreamDetailsResponse> rtpStreams, List<WebRTCSessionDetailsResponse> subSessions, NATSTUNNegotiationDetailsResponse stunNegotiation, long durationMs, DateTime firstSeen, DateTime lastActivity) {
         return builder()
                 .negotiationKey(negotiationKey)
                 .negotiationKeySha256(negotiationKeySha256)
@@ -66,6 +69,7 @@ public abstract class WebRTCSessionDetailsResponse {
                 .destination(destination)
                 .rtpStreams(rtpStreams)
                 .subSessions(subSessions)
+                .stunNegotiation(stunNegotiation)
                 .durationMs(durationMs)
                 .firstSeen(firstSeen)
                 .lastActivity(lastActivity)
@@ -107,6 +111,8 @@ public abstract class WebRTCSessionDetailsResponse {
         public abstract Builder rtpStreams(List<WebRTCRTPStreamDetailsResponse> rtpStreams);
 
         public abstract Builder subSessions(List<WebRTCSessionDetailsResponse> subSessions);
+
+        public abstract Builder stunNegotiation(NATSTUNNegotiationDetailsResponse stunNegotiation);
 
         public abstract Builder durationMs(long durationMs);
 
