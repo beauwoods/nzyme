@@ -20,7 +20,14 @@ use crate::to_pipeline;
 pub struct Capture {
     pub metrics: Arc<Mutex<Metrics>>,
     pub bus: Arc<Bus>,
-    pub configuration: BluetoothInterface
+    pub configuration: BluetoothInterface,
+    // The stable config key ("bt-<address>"), used as the metrics registry
+    // key -- NOT the same as the resolved hci device name, which can (and
+    // does) change across the life of this capture thread. Metrics are
+    // registered once under this name in main.rs; using the transient hci
+    // name here instead would silently break every metrics update after the
+    // first hci-index change.
+    pub interface_name: String
 }
 
 const DBUS_INTERFACE: &str = "org.bluez.Adapter1";
@@ -72,7 +79,7 @@ impl Capture {
             let result = catch_unwind(|| {
                 if self.configuration.bt_classic_enabled {
                     match self.discover_devices(&device_name, "bredr") {
-                        Ok(devices) => self.discovered_devices_to_pipeline(&device_name, devices),
+                        Ok(devices) => self.discovered_devices_to_pipeline(devices),
                         Err(e) => {
                             error!("Could not discover Bluetooth Classic devices on [{}]: {}", device_name, e);
                         }
@@ -81,7 +88,7 @@ impl Capture {
 
                 if self.configuration.bt_le_enabled {
                     match self.discover_devices(&device_name, "le") {
-                        Ok(devices) => self.discovered_devices_to_pipeline(&device_name, devices),
+                        Ok(devices) => self.discovered_devices_to_pipeline(devices),
                         Err(e) => {
                             error!("Could not discover Bluetooth LE devices on [{}]: {}", device_name, e);
                         }
@@ -267,7 +274,6 @@ impl Capture {
     }
 
     fn discovered_devices_to_pipeline(&self,
-                                      device_name: &str,
                                       devices: HashMap<String, BluetoothDeviceAdvertisement>) {
         for device in devices.values() {
             to_pipeline!(
@@ -280,7 +286,7 @@ impl Capture {
             match self.metrics.lock() {
                 Ok(mut metrics) => {
                     metrics.increment_processed_bytes_total(device.estimate_struct_size());
-                    metrics.update_capture(device_name, true, 0, 0, true);
+                    metrics.update_capture(&self.interface_name, true, 0, 0, true);
                 },
                 Err(e) => error!("Could not acquire metrics mutex: {}", e)
             }
@@ -409,4 +415,83 @@ impl Capture {
         (company_id, data)
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use crate::log_monitor::LogMonitor;
+    use crate::metrics::{CaptureType, Metrics};
+
+    // Regression test for the metrics registry key mismatch fixed alongside
+    // the BD-address-resolution work: a capture's metrics must be updated
+    // under the *stable* config key ("bt-<address>", `Capture::interface_name`
+    // in this module), never under the transient hci device name that BlueZ
+    // resolves it to -- that name can (and does) change over the capture
+    // thread's lifetime, and Metrics::update_capture() silently no-ops (just
+    // an error!() log line, no panic) when given a key it doesn't recognize.
+    // That silence is exactly what let this bug run in production for a full
+    // day before being noticed -- so this test asserts on the *data*
+    // (received count), not just "did it not crash".
+    //
+    // This can't invoke Capture::discovered_devices_to_pipeline() directly
+    // without a live D-Bus connection and a fully-constructed Bus/Configuration
+    // (not available in a unit test), so it tests the same underlying
+    // mechanism discovered_devices_to_pipeline relies on: Metrics keys
+    // captures by whatever string it's given, and only self.interface_name
+    // is guaranteed stable -- exactly like bluetooth_tools' own tests
+    // exercise the address-parsing helper in isolation rather than a live
+    // capture loop.
+    fn new_metrics() -> Metrics {
+        Metrics::new(Arc::new(LogMonitor::default()))
+    }
+
+    #[test]
+    fn update_under_the_stable_interface_name_is_recorded() {
+        let mut metrics = new_metrics();
+        let interface_name = "bt-08:BE:AC:4D:34:F2";
+        metrics.register_new_capture(interface_name, CaptureType::Bluetooth);
+
+        metrics.update_capture(interface_name, true, 0, 0, true);
+
+        assert_eq!(metrics.test_capture_received(interface_name), Some(1));
+    }
+
+    #[test]
+    fn update_under_a_transient_hci_name_silently_does_not_update_anything() {
+        // Reproduces the exact bug: the capture was registered under the
+        // stable key, but an update arrives keyed by whatever hci name BlueZ
+        // happened to resolve the adapter to at that moment.
+        let mut metrics = new_metrics();
+        let interface_name = "bt-08:BE:AC:4D:34:F2";
+        metrics.register_new_capture(interface_name, CaptureType::Bluetooth);
+
+        metrics.update_capture("hci2", true, 0, 0, true);
+
+        // Before the fix, this was the silent failure mode: no panic, no
+        // test failure from a crash -- just a metric that never moves.
+        assert_eq!(metrics.test_capture_received(interface_name), Some(0));
+        assert_eq!(metrics.test_capture_received("hci2"), None);
+    }
+
+    #[test]
+    fn stable_interface_name_keeps_working_across_hci_name_drift() {
+        // Mirrors a real reset cycle: the adapter is registered once under
+        // its stable address-derived key, then the OS-assigned hci name
+        // drifts across several resolutions over the capture thread's
+        // lifetime (hci2 -> hci1 -> hci3, as seen in production hci-index
+        // reassignment). Every one of those transient names must fail to
+        // match; only the stable key may ever succeed.
+        let mut metrics = new_metrics();
+        let interface_name = "bt-08:BE:AC:4D:34:F2";
+        metrics.register_new_capture(interface_name, CaptureType::Bluetooth);
+
+        for drifted_name in ["hci2", "hci1", "hci3"] {
+            metrics.update_capture(drifted_name, true, 0, 0, true);
+        }
+        assert_eq!(metrics.test_capture_received(interface_name), Some(0));
+
+        metrics.update_capture(interface_name, true, 0, 0, true);
+        assert_eq!(metrics.test_capture_received(interface_name), Some(1));
+    }
 }

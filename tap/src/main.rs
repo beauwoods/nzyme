@@ -491,7 +491,8 @@ fn main() {
                 let mut bt_capture = bluetooth::capture::Capture {
                     configuration: interface_config,
                     metrics: capture_metrics.clone(),
-                    bus: capture_bus
+                    bus: capture_bus,
+                    interface_name: interface_name.clone()
                 };
 
                 match capture_metrics.lock() {

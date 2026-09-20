@@ -214,6 +214,17 @@ impl Metrics {
         }
     }
 
+    // Test-only: expose enough of a registered capture's state to assert on
+    // without making `captures` itself public. Used to regression-test the
+    // key-mismatch bug fixed alongside the Bluetooth BD-address resolution
+    // work (a capture updated under the wrong key silently no-ops instead
+    // of erroring the test, which is itself the whole danger of that bug --
+    // see wireless::bluetooth::capture::tests).
+    #[cfg(test)]
+    pub fn test_capture_received(&self, name: &str) -> Option<u128> {
+        self.captures.get(name).map(|c| c.received)
+    }
+
     pub fn mark_capture_as_failed(&mut self, name: &str) {
         match self.captures.get_mut(name) {
             Some(capture) => capture.is_running = false,
