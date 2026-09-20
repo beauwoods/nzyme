@@ -85,7 +85,7 @@ export default function WebRTCSessionDetailsPage() {
   }
 
   const rtpStreams = () => {
-    if (!session.rtp_streams || session.rtp_streams === 0) {
+    if (!session.rtp_streams || session.rtp_streams.length === 0) {
       return <div className="alert alert-info mb-0">This session did not contain RTP streams.</div>
     }
 
